@@ -27,7 +27,12 @@
   border-bottom: 3px solid transparent;
 }
 .main-nav li:first-child > a, .main-nav li > a:hover { color: var(--navy); border-bottom-color: var(--navy); }
-.chevron { font-size: 13px; line-height: 1; }
+.chevron-lottie {
+  flex: 0 0 14px; width: 14px; height: 14px;
+  display: inline-flex; align-items: center; justify-content: center; line-height: 0;
+}
+.chevron-lottie > div, .chevron-lottie svg { display: block; width: 100%; height: 100%; }
+.chevron-lottie svg path { stroke: currentColor; }
 .submenu {
   position: absolute; top: calc(100% - 3px); left: 50%; width: 190px; padding: 12px;
   color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 6px;
