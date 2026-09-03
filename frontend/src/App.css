@@ -21,18 +21,42 @@
 .main-nav { margin: 0 auto; }
 .main-nav ul { display: flex; align-items: center; gap: 8px; padding: 0; margin: 0; list-style: none; }
 .main-nav li { position: relative; }
-.main-nav li > a {
+.main-nav li > a,
+.main-nav li > .nav-trigger {
   display: flex; align-items: center; gap: 5px; padding: 27px 12px 24px;
   color: #344054; font-size: 14px; font-weight: 600; text-decoration: none;
-  border-bottom: 3px solid transparent;
+  background: none; border: 0; border-bottom: 3px solid transparent;
 }
-.main-nav li:first-child > a, .main-nav li > a:hover { color: var(--navy); border-bottom-color: var(--navy); }
-.chevron-lottie {
+.main-nav li > .nav-trigger { cursor: pointer; text-align: left; }
+.main-nav li:first-child > a,
+.main-nav li > a:hover,
+.main-nav li > .nav-trigger:hover,
+.main-nav li > .nav-trigger[aria-expanded='true'] { color: var(--navy); border-bottom-color: var(--navy); }
+.chevron-icon {
+  position: relative;
   flex: 0 0 14px; width: 14px; height: 14px;
   display: inline-flex; align-items: center; justify-content: center; line-height: 0;
+  animation: chevron-bob 1s ease-in-out infinite;
 }
-.chevron-lottie > div, .chevron-lottie svg { display: block; width: 100%; height: 100%; }
-.chevron-lottie svg path { stroke: currentColor; }
+.chevron-icon::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translate(-2px, 0) rotate(-45deg);
+  transition: transform 240ms cubic-bezier(.4, 0, .2, 1);
+}
+.chevron-icon.is-open::before {
+  transform: translate(0, -2px) rotate(45deg);
+}
+@keyframes chevron-bob {
+  0%, 100% { transform: translateY(-1.5px); }
+  50% { transform: translateY(1.5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chevron-icon { animation: none; transform: none; }
+  .chevron-icon::before { transition-duration: 1ms; }
+}
 .submenu {
   position: absolute; top: calc(100% - 3px); left: 50%; width: 190px; padding: 12px;
   color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 6px;
@@ -42,7 +66,7 @@
 .submenu a { display: block; padding: 10px 12px; color: #344054; border-radius: 4px; font-size: 13px; font-weight: 600; text-align: left; text-decoration: none; }
 .submenu a:hover { color: var(--navy); background: #f2f5f8; }
 .submenu span { display: block; padding: 7px; }
-.has-submenu:hover .submenu, .has-submenu:focus-within .submenu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.has-submenu.is-open > .submenu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
 .report-button, .primary-button {
   display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
   font-weight: 700; background: var(--yellow); color: #202b3c;
@@ -256,9 +280,14 @@
   .main-nav { position: absolute; top: 68px; left: 0; right: 0; display: none; margin: 0; padding: 12px 16px 18px; background: #fff; border-top: 1px solid var(--line); box-shadow: 0 14px 24px rgba(16,42,78,.12); }
   .main-nav.is-open { display: block; }
   .main-nav ul { display: block; }
-  .main-nav li > a { justify-content: space-between; padding: 13px 8px; border-bottom: 1px solid #edf0f4; }
-  .main-nav li:first-child > a, .main-nav li > a:hover { border-bottom-color: #edf0f4; }
-  .submenu { position: static; width: auto; display: block; padding: 3px 8px 9px 18px; border: 0; box-shadow: none; opacity: 1; visibility: visible; transform: none; }
+  .main-nav li > a,
+  .main-nav li > .nav-trigger { justify-content: space-between; width: 100%; padding: 13px 8px; border-bottom: 1px solid #edf0f4; }
+  .main-nav li:first-child > a,
+  .main-nav li > a:hover,
+  .main-nav li > .nav-trigger:hover,
+  .main-nav li > .nav-trigger[aria-expanded='true'] { border-bottom-color: #edf0f4; }
+  .submenu { position: static; width: auto; display: none; padding: 3px 8px 9px 18px; border: 0; box-shadow: none; opacity: 1; visibility: visible; transform: none; }
+  .has-submenu.is-open > .submenu { display: block; opacity: 1; visibility: visible; transform: none; }
   .submenu a { padding: 9px 12px; border-left: 2px solid #dbe1e8; }
   .submenu span { display: none; }
   .report-button { min-width: 62px; height: 34px; margin-left: 8px; }
