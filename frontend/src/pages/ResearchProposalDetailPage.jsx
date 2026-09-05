@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 import useAuth from '../hooks/useAuth'
+import DeleteProposalModal from '../components/DeleteProposalModal'
 
 function formatDate(value) {
   if (!value) return '-'
   return new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(value))
+}
+
+const verificationLabels = {
+  pending: 'Menunggu Verifikasi',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
 }
 
 function ResearchProposalDetailPage({ proposalId }) {
@@ -12,6 +19,7 @@ function ResearchProposalDetailPage({ proposalId }) {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const { token } = useAuth()
 
   useEffect(() => {
@@ -29,7 +37,7 @@ function ResearchProposalDetailPage({ proposalId }) {
   }, [proposalId, token])
 
   const deleteProposal = async () => {
-    if (!window.confirm(`Hapus proposal "${proposal.proposal_title}"? Data dan file PDF tidak dapat dikembalikan.`)) return
+    if (isDeleting) return
 
     setIsDeleting(true)
     setError('')
@@ -47,6 +55,7 @@ function ResearchProposalDetailPage({ proposalId }) {
         setError('Proposal gagal dihapus. Silakan coba kembali.')
       }
       setIsDeleting(false)
+      setIsConfirmOpen(false)
     }
   }
 
@@ -62,7 +71,9 @@ function ResearchProposalDetailPage({ proposalId }) {
 
         <header className="proposal-detail-header">
           <div>
-            <span className="result-status">{proposal.status === 'submitted' ? 'Diajukan' : 'Draft'}</span>
+            <span className={`result-status ${proposal.status === 'draft' ? 'is-draft' : `is-${proposal.verification_status}`}`}>
+              {proposal.status === 'draft' ? 'Draft' : (verificationLabels[proposal.verification_status] ?? 'Menunggu Verifikasi')}
+            </span>
             <h1>{proposal.proposal_title || 'Proposal tanpa judul'}</h1>
             <p>Dikirim {formatDate(proposal.submitted_at || proposal.created_at)}</p>
           </div>
@@ -70,12 +81,13 @@ function ResearchProposalDetailPage({ proposalId }) {
             {proposal.can_manage && <a href={`/riset/proposal/${proposal.id}/edit`}>Edit Proposal</a>}
             {proposal.pdf_url && <a href={proposal.pdf_url} target="_blank" rel="noreferrer">Lihat PDF</a>}
             {proposal.can_manage && (
-              <button type="button" disabled={isDeleting} onClick={deleteProposal}>{isDeleting ? 'Menghapus...' : 'Hapus'}</button>
+              <button type="button" disabled={isDeleting} onClick={() => setIsConfirmOpen(true)}>{isDeleting ? 'Menghapus...' : 'Hapus'}</button>
             )}
           </div>
         </header>
 
         {error && <div className="form-feedback error">{error}</div>}
+        {proposal.status === 'submitted' && proposal.review_note && <div className="proposal-review-note"><strong>Catatan Admin</strong><span>{proposal.review_note}</span></div>}
 
         <div className="proposal-overview">
           <div><span>Nama Peneliti</span><strong>{proposal.researcher_name || '-'}</strong></div>
@@ -90,6 +102,14 @@ function ResearchProposalDetailPage({ proposalId }) {
           <section><span>BAB III</span><h2>Hasil yang Dituju</h2><p>{proposal.chapter_three || '-'}</p></section>
         </div>
       </div>
+
+      <DeleteProposalModal
+        open={isConfirmOpen}
+        proposalTitle={proposal.proposal_title}
+        isDeleting={isDeleting}
+        onCancel={() => setIsConfirmOpen(false)}
+        onConfirm={deleteProposal}
+      />
     </section>
   )
 }

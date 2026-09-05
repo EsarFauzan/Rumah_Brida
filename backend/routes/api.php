@@ -25,4 +25,7 @@ Route::middleware(['auth:sanctum', 'throttle:proposal-write'])->group(function (
     Route::post('/research-proposals', [ResearchProposalController::class, 'store']);
     Route::put('/research-proposals/{researchProposal}', [ResearchProposalController::class, 'update']);
     Route::delete('/research-proposals/{researchProposal}', [ResearchProposalController::class, 'destroy']);
+    Route::patch('/admin/research-proposals/{researchProposal}/verification', [ResearchProposalController::class, 'review']);
 });
+
+Route::middleware('auth:sanctum')->get('/admin/research-proposals', [ResearchProposalController::class, 'adminIndex']);

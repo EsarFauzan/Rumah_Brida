@@ -24,8 +24,16 @@ class ResearchProposalController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $status = $request->query('status', 'submitted');
+        $validated = $request->validate([
+            'status' => ['nullable', Rule::in(['draft', 'submitted', 'all'])],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $status = $validated['status'] ?? 'submitted';
+        $perPage = $validated['per_page'] ?? 10;
         $user = $request->user();
+
+        abort_if($status === 'draft' && ! $user, 401);
 
         // Draft hanya boleh terlihat oleh pemiliknya sendiri.
         if ($status !== 'submitted' && ! $user) {
@@ -43,10 +51,33 @@ class ResearchProposalController extends Controller
             )
             ->latest('submitted_at')
             ->latest('created_at')
-            ->get()
-            ->map(fn (ResearchProposal $proposal) => $this->serialize($proposal));
+            ->paginate($perPage)
+            ->through(fn (ResearchProposal $proposal) => $this->serializeListItem($proposal));
 
-        return response()->json(['data' => $proposals]);
+        return response()->json($this->paginatedResponse($proposals));
+    }
+
+    public function adminIndex(Request $request): JsonResponse
+    {
+        Gate::authorize('viewAny', ResearchProposal::class);
+
+        $validated = $request->validate([
+            'verification_status' => ['nullable', Rule::in(['pending', 'approved', 'rejected', 'all'])],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $verificationStatus = $validated['verification_status'] ?? 'pending';
+        $perPage = $validated['per_page'] ?? 10;
+
+        $proposals = ResearchProposal::query()
+            ->where('status', 'submitted')
+            ->when($verificationStatus !== 'all', fn ($query) => $query->where('verification_status', $verificationStatus))
+            ->latest('submitted_at')
+            ->latest('created_at')
+            ->paginate($perPage)
+            ->through(fn (ResearchProposal $proposal) => $this->serializeListItem($proposal));
+
+        return response()->json($this->paginatedResponse($proposals));
     }
 
     public function store(Request $request): JsonResponse
@@ -70,6 +101,7 @@ class ResearchProposalController extends Controller
             'pdf_path' => $pdfPath,
             'pdf_original_name' => $request->file('pdf')?->getClientOriginalName(),
             'status' => $isSubmit ? 'submitted' : 'draft',
+            'verification_status' => 'pending',
             'submitted_at' => $isSubmit ? now() : null,
         ]);
 
@@ -109,6 +141,14 @@ class ResearchProposalController extends Controller
         $data['status'] = $isSubmit ? 'submitted' : 'draft';
         $data['submitted_at'] = $isSubmit ? ($researchProposal->submitted_at ?? now()) : null;
 
+        if ($isSubmit) {
+            // Perubahan setelah pengiriman wajib melalui peninjauan admin lagi.
+            $data['verification_status'] = 'pending';
+            $data['review_note'] = null;
+            $data['reviewed_by_id'] = null;
+            $data['reviewed_at'] = null;
+        }
+
         if ($request->hasFile('pdf')) {
             $data['pdf_path'] = $request->file('pdf')->store('research-proposals', self::PDF_DISK);
             $data['pdf_original_name'] = $request->file('pdf')->getClientOriginalName();
@@ -137,6 +177,40 @@ class ResearchProposalController extends Controller
         $researchProposal->delete();
 
         return response()->json(['message' => 'Proposal berhasil dihapus.']);
+    }
+
+    public function review(Request $request, ResearchProposal $researchProposal): JsonResponse
+    {
+        Gate::authorize('review', $researchProposal);
+
+        $validated = $request->validate([
+            'verification_status' => ['required', Rule::in(['pending', 'approved', 'rejected'])],
+            'review_note' => ['nullable', 'string', 'max:1000', 'required_if:verification_status,rejected'],
+        ], [
+            'required' => ':attribute wajib diisi.',
+            'required_if' => ':attribute wajib diisi saat proposal ditolak.',
+        ], [
+            'verification_status' => 'Status verifikasi',
+            'review_note' => 'Catatan admin',
+        ]);
+
+        $isPending = $validated['verification_status'] === 'pending';
+
+        $researchProposal->update([
+            'verification_status' => $validated['verification_status'],
+            'review_note' => $isPending ? null : ($validated['review_note'] ?? null),
+            'reviewed_by_id' => $isPending ? null : $request->user()->id,
+            'reviewed_at' => $isPending ? null : now(),
+        ]);
+
+        return response()->json([
+            'message' => match ($validated['verification_status']) {
+                'approved' => 'Proposal disetujui.',
+                'rejected' => 'Proposal ditolak.',
+                default => 'Proposal dikembalikan ke status menunggu.',
+            },
+            'data' => $this->serialize($researchProposal->fresh()),
+        ]);
     }
 
     /**
@@ -231,6 +305,48 @@ class ResearchProposalController extends Controller
                 )
                 : null,
             'can_manage' => Gate::allows('update', $proposal),
+            'can_review' => Gate::allows('review', $proposal),
+        ];
+    }
+
+    private function serializeListItem(ResearchProposal $proposal): array
+    {
+        return [
+            'id' => $proposal->id,
+            'user_id' => $proposal->user_id,
+            'researcher_name' => $proposal->researcher_name,
+            'proposal_title' => $proposal->proposal_title,
+            'institution' => $proposal->institution,
+            'research_coordinates' => $proposal->research_coordinates,
+            'pdf_original_name' => $proposal->pdf_original_name,
+            'status' => $proposal->status,
+            'verification_status' => $proposal->verification_status,
+            'review_note' => $proposal->review_note,
+            'submitted_at' => $proposal->submitted_at,
+            'created_at' => $proposal->created_at,
+            'updated_at' => $proposal->updated_at,
+            'pdf_url' => $proposal->pdf_path
+                ? URL::temporarySignedRoute(
+                    'research-proposals.pdf',
+                    now()->addMinutes(self::PDF_URL_TTL_MINUTES),
+                    ['researchProposal' => $proposal->id],
+                )
+                : null,
+            'can_manage' => Gate::allows('update', $proposal),
+            'can_review' => Gate::allows('review', $proposal),
+        ];
+    }
+
+    private function paginatedResponse($paginator): array
+    {
+        return [
+            'data' => $paginator->items(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
         ];
     }
 }

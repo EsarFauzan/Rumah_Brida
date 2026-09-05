@@ -18,13 +18,18 @@ class AuthApiTest extends TestCase
             'email' => 'peneliti.baru@example.test',
             'password' => 'katasandi123',
             'password_confirmation' => 'katasandi123',
+            'role' => 'admin',
         ]);
 
         $response->assertCreated()
             ->assertJsonPath('data.user.email', 'peneliti.baru@example.test')
-            ->assertJsonStructure(['message', 'data' => ['user' => ['id', 'name', 'email'], 'token']]);
+            ->assertJsonPath('data.user.role', 'researcher')
+            ->assertJsonStructure(['message', 'data' => ['user' => ['id', 'name', 'email', 'role'], 'token']]);
 
-        $this->assertDatabaseHas('users', ['email' => 'peneliti.baru@example.test']);
+        $this->assertDatabaseHas('users', [
+            'email' => 'peneliti.baru@example.test',
+            'role' => 'researcher',
+        ]);
     }
 
     public function test_register_rejects_duplicate_email(): void
@@ -49,7 +54,10 @@ class AuthApiTest extends TestCase
         $this->postJson('/api/auth/login', [
             'email' => 'peneliti@example.test',
             'password' => 'katasandi123',
-        ])->assertOk()->assertJsonPath('data.user.email', 'peneliti@example.test');
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.email', 'peneliti@example.test')
+            ->assertJsonPath('data.user.role', 'researcher');
     }
 
     public function test_login_fails_with_wrong_password(): void
@@ -75,7 +83,10 @@ class AuthApiTest extends TestCase
         $user = User::factory()->create();
         Sanctum::actingAs($user);
 
-        $this->getJson('/api/auth/me')->assertOk()->assertJsonPath('data.id', $user->id);
+        $this->getJson('/api/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.id', $user->id)
+            ->assertJsonPath('data.role', 'researcher');
         $this->postJson('/api/auth/logout')->assertOk();
     }
 }

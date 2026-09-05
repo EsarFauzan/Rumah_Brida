@@ -1,21 +1,33 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
 import useAuth from '../hooks/useAuth'
+import Pagination from '../components/Pagination'
+import DeleteProposalModal from '../components/DeleteProposalModal'
+
+const verificationLabels = {
+  pending: 'Menunggu Verifikasi',
+  approved: 'Disetujui',
+  rejected: 'Ditolak',
+}
 
 function ResearchResultsPage() {
   const [proposals, setProposals] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const [proposalToDelete, setProposalToDelete] = useState(null)
+  const [pagination, setPagination] = useState(null)
+  const [page, setPage] = useState(1)
   const { token, isAuthenticated } = useAuth()
 
   useEffect(() => {
     let isMounted = true
 
-    api.get('/research-proposals?status=submitted')
+    api.get(`/research-proposals?status=submitted&page=${page}`)
       .then((response) => {
         if (!isMounted) return
         setProposals(response.data.data)
+        setPagination(response.data.pagination)
         setError('')
       })
       .catch(() => {
@@ -26,11 +38,10 @@ function ResearchResultsPage() {
       })
 
     return () => { isMounted = false }
-  }, [token])
+  }, [page, token])
 
   const deleteProposal = async (proposal) => {
-    const confirmed = window.confirm(`Hapus proposal "${proposal.proposal_title}"? Data dan file PDF tidak dapat dikembalikan.`)
-    if (!confirmed) return
+    if (deletingId !== null) return
 
     setDeletingId(proposal.id)
     setError('')
@@ -38,6 +49,7 @@ function ResearchResultsPage() {
     try {
       await api.delete(`/research-proposals/${proposal.id}`)
       setProposals((current) => current.filter((item) => item.id !== proposal.id))
+      setProposalToDelete(null)
     } catch (requestError) {
       if (requestError.response?.status === 401) {
         setError('Sesi Anda berakhir. Silakan masuk kembali sebelum menghapus proposal.')
@@ -46,6 +58,7 @@ function ResearchResultsPage() {
       } else {
         setError('Proposal gagal dihapus. Silakan coba kembali.')
       }
+      setProposalToDelete(null)
     } finally {
       setDeletingId(null)
     }
@@ -71,9 +84,9 @@ function ResearchResultsPage() {
               <article className="research-result-item" key={proposal.id}>
                 <div className="result-number">{String(proposal.id).padStart(2, '0')}</div>
                 <div className="result-main">
-                  <span className="result-status">Diajukan</span>
+                  <span className={`result-status is-${proposal.verification_status}`}>{verificationLabels[proposal.verification_status] ?? 'Menunggu Verifikasi'}</span>
                   <h2>{proposal.proposal_title}</h2>
-                  <p>{proposal.chapter_three}</p>
+                  <p>Proposal riset yang diajukan untuk mendukung riset dan inovasi daerah.</p>
                   <div className="result-meta"><span>{proposal.researcher_name}</span><span>{proposal.institution}</span><span>{proposal.research_coordinates}</span></div>
                 </div>
                 <div className="result-actions">
@@ -81,7 +94,7 @@ function ResearchResultsPage() {
                   {proposal.can_manage && <a className="result-action" href={`/riset/proposal/${proposal.id}/edit`}>Edit</a>}
                   {proposal.pdf_url && <a className="result-action" href={proposal.pdf_url} target="_blank" rel="noreferrer">PDF</a>}
                   {proposal.can_manage && (
-                    <button className="result-action danger" type="button" disabled={deletingId === proposal.id} onClick={() => deleteProposal(proposal)}>
+                    <button className="result-action danger" type="button" disabled={deletingId === proposal.id} onClick={() => setProposalToDelete(proposal)}>
                       {deletingId === proposal.id ? 'Menghapus...' : 'Hapus'}
                     </button>
                   )}
@@ -90,7 +103,16 @@ function ResearchResultsPage() {
             ))}
           </div>
         )}
+        {!isLoading && !error && <Pagination pagination={pagination} onPageChange={setPage} />}
       </div>
+
+      <DeleteProposalModal
+        open={proposalToDelete !== null}
+        proposalTitle={proposalToDelete?.proposal_title}
+        isDeleting={deletingId !== null}
+        onCancel={() => setProposalToDelete(null)}
+        onConfirm={() => deleteProposal(proposalToDelete)}
+      />
     </section>
   )
 }
