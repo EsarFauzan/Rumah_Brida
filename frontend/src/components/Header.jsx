@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import logoRumahBrida from '../assets/image/logo_fix.png'
 import AnimatedChevron from './AnimatedChevron'
+import useAuth from '../hooks/useAuth'
+import api from '../services/api'
+import { clearSession } from '../services/authStore'
 
 const menuItems = [
   { label: 'Beranda', href: '/#beranda' },
@@ -18,9 +21,34 @@ const menuItems = [
 
 const submenuId = (label) => `submenu-${label.toLowerCase().replace(/\s+/g, '-')}`
 
+const getActiveMenu = () => {
+  const { hash, pathname } = window.location
+
+  if (pathname === '/riset' || pathname.startsWith('/riset/')) {
+    return 'Riset'
+  }
+
+  if (pathname === '/') {
+    if (hash === '#inovasi') {
+      return 'Inovasi'
+    }
+
+    if (hash === '#lomba') {
+      return 'Lomba'
+    }
+
+    return 'Beranda'
+  }
+
+  return null
+}
+
 function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [openMenu, setOpenMenu] = useState(null)
+  const [activeMenu, setActiveMenu] = useState(getActiveMenu)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { isAuthenticated, user } = useAuth()
   const headerRef = useRef(null)
 
   const closeAll = () => {
@@ -30,6 +58,22 @@ function Header() {
 
   const toggleSubmenu = (label) => {
     setOpenMenu((current) => (current === label ? null : label))
+  }
+
+  const logout = async () => {
+    setIsLoggingOut(true)
+
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Token bisa saja sudah tidak valid di server; sesi lokal tetap dibersihkan.
+    } finally {
+      clearSession()
+      setIsLoggingOut(false)
+      closeAll()
+      window.history.pushState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }
   }
 
   useEffect(() => {
@@ -61,6 +105,18 @@ function Header() {
     }
   }, [openMenu])
 
+  useEffect(() => {
+    const syncActiveMenu = () => setActiveMenu(getActiveMenu())
+
+    window.addEventListener('popstate', syncActiveMenu)
+    window.addEventListener('hashchange', syncActiveMenu)
+
+    return () => {
+      window.removeEventListener('popstate', syncActiveMenu)
+      window.removeEventListener('hashchange', syncActiveMenu)
+    }
+  }, [])
+
   return (
     <header className="site-header" ref={headerRef}>
       <div className="container header-inner">
@@ -81,6 +137,7 @@ function Header() {
             {menuItems.map((item) => {
               const hasSubmenu = item.submenu?.length > 0
               const isSubmenuOpen = hasSubmenu && openMenu === item.label
+              const isActive = activeMenu === item.label
               const panelId = submenuId(item.label)
 
               return (
@@ -90,8 +147,8 @@ function Header() {
                 >
                   {hasSubmenu ? (
                     <button
-                      className="nav-trigger"
                       type="button"
+                      className={`nav-trigger${isActive ? ' is-active' : ''}`}
                       aria-expanded={isSubmenuOpen}
                       aria-controls={panelId}
                       onClick={() => toggleSubmenu(item.label)}
@@ -100,12 +157,30 @@ function Header() {
                       <AnimatedChevron open={isSubmenuOpen} />
                     </button>
                   ) : (
-                    <a href={item.href} onClick={closeAll}>{item.label}</a>
+                    <a
+                      className={isActive ? 'is-active' : ''}
+                      href={item.href}
+                      onClick={() => {
+                        closeAll()
+                        setActiveMenu(item.label)
+                      }}
+                    >
+                      {item.label}
+                    </a>
                   )}
                   {hasSubmenu && (
                     <div className="submenu" id={panelId}>
                       {item.submenu.map((subitem) => (
-                        <a key={subitem.label} href={subitem.href} onClick={closeAll}>{subitem.label}</a>
+                        <a
+                          key={subitem.label}
+                          href={subitem.href}
+                          onClick={() => {
+                            closeAll()
+                            setActiveMenu(item.label)
+                          }}
+                        >
+                          {subitem.label}
+                        </a>
                       ))}
                     </div>
                   )}
@@ -116,6 +191,19 @@ function Header() {
         </nav>
 
         <a className="report-button" href="#lapor">Lapor</a>
+
+        <div className="header-account">
+          {isAuthenticated ? (
+            <>
+              <span title={user?.email ?? ''}>{user?.name ?? 'Akun'}</span>
+              <button className="account-button" type="button" disabled={isLoggingOut} onClick={logout}>
+                {isLoggingOut ? 'Keluar...' : 'Keluar'}
+              </button>
+            </>
+          ) : (
+            <a className="account-button" href="/masuk" onClick={closeAll}>Masuk</a>
+          )}
+        </div>
       </div>
     </header>
   )

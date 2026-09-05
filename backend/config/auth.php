@@ -16,7 +16,12 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'web'),
+        // Aplikasi ini dipakai sebagai API token (Sanctum) untuk frontend
+        // terpisah, sehingga guard default harus 'sanctum'. Tanpa ini, route
+        // publik seperti GET /api/research-proposals tidak mengenali bearer
+        // token sama sekali: $request->user() dan Gate memakai guard 'web'
+        // (session) yang selalu null pada request token.
+        'guard' => env('AUTH_GUARD', 'sanctum'),
         'passwords' => env('AUTH_PASSWORD_BROKER', 'users'),
     ],
 
@@ -40,6 +45,13 @@ return [
     'guards' => [
         'web' => [
             'driver' => 'session',
+            'provider' => 'users',
+        ],
+
+        // Guard ini sebenarnya sudah didaftarkan otomatis oleh Sanctum, tetapi
+        // ditulis eksplisit di sini supaya terlihat saat membaca konfigurasi.
+        'sanctum' => [
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
     ],

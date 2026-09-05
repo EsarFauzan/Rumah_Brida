@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import useAuth from '../hooks/useAuth'
 
 function formatDate(value) {
   if (!value) return '-'
@@ -11,13 +12,21 @@ function ResearchProposalDetailPage({ proposalId }) {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isDeleting, setIsDeleting] = useState(false)
+  const { token } = useAuth()
 
   useEffect(() => {
     api.get(`/research-proposals/${proposalId}`)
-      .then((response) => setProposal(response.data.data))
-      .catch(() => setError('Detail proposal tidak dapat dimuat.'))
+      .then((response) => {
+        setProposal(response.data.data)
+        setError('')
+      })
+      .catch((requestError) => {
+        setError(requestError.response?.status === 403
+          ? 'Proposal ini masih berstatus draft dan hanya dapat dilihat pemiliknya.'
+          : 'Detail proposal tidak dapat dimuat.')
+      })
       .finally(() => setIsLoading(false))
-  }, [proposalId])
+  }, [proposalId, token])
 
   const deleteProposal = async () => {
     if (!window.confirm(`Hapus proposal "${proposal.proposal_title}"? Data dan file PDF tidak dapat dikembalikan.`)) return
@@ -29,8 +38,14 @@ function ResearchProposalDetailPage({ proposalId }) {
       await api.delete(`/research-proposals/${proposalId}`)
       window.history.pushState({}, '', '/riset/hasil')
       window.dispatchEvent(new PopStateEvent('popstate'))
-    } catch {
-      setError('Proposal gagal dihapus. Silakan coba kembali.')
+    } catch (requestError) {
+      if (requestError.response?.status === 401) {
+        setError('Sesi Anda berakhir. Silakan masuk kembali sebelum menghapus proposal.')
+      } else if (requestError.response?.status === 403) {
+        setError('Anda tidak berhak menghapus proposal ini.')
+      } else {
+        setError('Proposal gagal dihapus. Silakan coba kembali.')
+      }
       setIsDeleting(false)
     }
   }
@@ -52,9 +67,11 @@ function ResearchProposalDetailPage({ proposalId }) {
             <p>Dikirim {formatDate(proposal.submitted_at || proposal.created_at)}</p>
           </div>
           <div className="proposal-detail-actions">
-            <a href={`/riset/proposal/${proposal.id}/edit`}>Edit Proposal</a>
+            {proposal.can_manage && <a href={`/riset/proposal/${proposal.id}/edit`}>Edit Proposal</a>}
             {proposal.pdf_url && <a href={proposal.pdf_url} target="_blank" rel="noreferrer">Lihat PDF</a>}
-            <button type="button" disabled={isDeleting} onClick={deleteProposal}>{isDeleting ? 'Menghapus...' : 'Hapus'}</button>
+            {proposal.can_manage && (
+              <button type="button" disabled={isDeleting} onClick={deleteProposal}>{isDeleting ? 'Menghapus...' : 'Hapus'}</button>
+            )}
           </div>
         </header>
 

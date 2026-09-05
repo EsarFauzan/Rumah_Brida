@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import useAuth from '../hooks/useAuth'
 
 const initialForm = {
   researcher_name: '',
@@ -27,6 +28,7 @@ function ResearchProposalPage({ proposalId = null }) {
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(Boolean(proposalId))
   const [existingPdfName, setExistingPdfName] = useState('')
+  const { isAuthenticated } = useAuth()
   const isEditing = Boolean(proposalId)
 
   useEffect(() => {
@@ -89,12 +91,38 @@ function ResearchProposalPage({ proposalId = null }) {
         const validationErrors = error.response.data.errors ?? {}
         setErrors(Object.fromEntries(Object.entries(validationErrors).map(([key, value]) => [key, value[0]])))
         setFeedback({ type: 'error', message: 'Periksa kembali data proposal yang diisi.' })
+      } else if (error.response?.status === 401) {
+        setFeedback({ type: 'error', message: 'Sesi Anda berakhir. Silakan masuk kembali untuk menyimpan proposal.' })
+      } else if (error.response?.status === 403) {
+        setFeedback({ type: 'error', message: 'Anda tidak berhak mengubah proposal ini.' })
+      } else if (error.response?.status === 429) {
+        setFeedback({ type: 'error', message: 'Terlalu banyak pengiriman. Tunggu sebentar lalu coba lagi.' })
       } else {
         setFeedback({ type: 'error', message: 'Tidak dapat terhubung ke server. Pastikan backend Laravel sedang berjalan.' })
       }
     } finally {
       setIsSaving(false)
     }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <section className="research-page">
+        <div className="research-form-card auth-card">
+          <header className="research-form-header">
+            <p>Riset</p>
+            <h1>Masuk Terlebih Dahulu</h1>
+          </header>
+          <div className="auth-required">
+            <p>Pengajuan dan perubahan proposal riset hanya tersedia untuk pengguna yang sudah masuk.</p>
+          </div>
+          <div className="form-actions">
+            <a className="secondary-form-link" href="/riset/hasil">Lihat Hasil Riset</a>
+            <a className="primary-form-link" href="/masuk">Masuk</a>
+          </div>
+        </div>
+      </section>
+    )
   }
 
   return (

@@ -1,18 +1,22 @@
 import { useEffect, useState } from 'react'
 import api from '../services/api'
+import useAuth from '../hooks/useAuth'
 
 function ResearchResultsPage() {
   const [proposals, setProposals] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [deletingId, setDeletingId] = useState(null)
+  const { token, isAuthenticated } = useAuth()
 
   useEffect(() => {
     let isMounted = true
 
     api.get('/research-proposals?status=submitted')
       .then((response) => {
-        if (isMounted) setProposals(response.data.data)
+        if (!isMounted) return
+        setProposals(response.data.data)
+        setError('')
       })
       .catch(() => {
         if (isMounted) setError('Data hasil riset belum dapat dimuat. Pastikan backend Laravel sedang berjalan.')
@@ -22,7 +26,7 @@ function ResearchResultsPage() {
       })
 
     return () => { isMounted = false }
-  }, [])
+  }, [token])
 
   const deleteProposal = async (proposal) => {
     const confirmed = window.confirm(`Hapus proposal "${proposal.proposal_title}"? Data dan file PDF tidak dapat dikembalikan.`)
@@ -34,8 +38,14 @@ function ResearchResultsPage() {
     try {
       await api.delete(`/research-proposals/${proposal.id}`)
       setProposals((current) => current.filter((item) => item.id !== proposal.id))
-    } catch {
-      setError('Proposal gagal dihapus. Silakan coba kembali.')
+    } catch (requestError) {
+      if (requestError.response?.status === 401) {
+        setError('Sesi Anda berakhir. Silakan masuk kembali sebelum menghapus proposal.')
+      } else if (requestError.response?.status === 403) {
+        setError('Anda tidak berhak menghapus proposal ini.')
+      } else {
+        setError('Proposal gagal dihapus. Silakan coba kembali.')
+      }
     } finally {
       setDeletingId(null)
     }
@@ -46,7 +56,7 @@ function ResearchResultsPage() {
       <div className="container">
         <header className="results-header">
           <div><p>Riset</p><h1>Hasil Riset</h1><span>Daftar proposal riset yang telah dikirim.</span></div>
-          <a href="/riset/proposal">Ajukan Proposal</a>
+          <a href={isAuthenticated ? '/riset/proposal' : '/masuk'}>{isAuthenticated ? 'Ajukan Proposal' : 'Masuk untuk Mengajukan'}</a>
         </header>
 
         {isLoading && <div className="results-state">Memuat data hasil riset...</div>}
@@ -68,11 +78,13 @@ function ResearchResultsPage() {
                 </div>
                 <div className="result-actions">
                   <a className="result-action primary" href={`/riset/hasil/${proposal.id}`}>Detail</a>
-                  <a className="result-action" href={`/riset/proposal/${proposal.id}/edit`}>Edit</a>
+                  {proposal.can_manage && <a className="result-action" href={`/riset/proposal/${proposal.id}/edit`}>Edit</a>}
                   {proposal.pdf_url && <a className="result-action" href={proposal.pdf_url} target="_blank" rel="noreferrer">PDF</a>}
-                  <button className="result-action danger" type="button" disabled={deletingId === proposal.id} onClick={() => deleteProposal(proposal)}>
-                    {deletingId === proposal.id ? 'Menghapus...' : 'Hapus'}
-                  </button>
+                  {proposal.can_manage && (
+                    <button className="result-action danger" type="button" disabled={deletingId === proposal.id} onClick={() => deleteProposal(proposal)}>
+                      {deletingId === proposal.id ? 'Menghapus...' : 'Hapus'}
+                    </button>
+                  )}
                 </div>
               </article>
             ))}

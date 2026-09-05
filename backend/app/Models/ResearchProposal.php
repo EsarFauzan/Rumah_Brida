@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ResearchProposal extends Model
 {
     protected $fillable = [
+        'user_id',
         'researcher_name',
         'proposal_title',
         'institution',
@@ -25,5 +27,13 @@ class ResearchProposal extends Model
         return [
             'submitted_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }
