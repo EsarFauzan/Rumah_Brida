@@ -156,6 +156,8 @@ Sisi frontend:
   membersihkan sesi otomatis saat respons 401.
 - Efek pengambilan data di halaman riset memakai `token` sebagai dependency
   supaya daftar dan detail ikut disegarkan setelah masuk atau keluar.
+- Kelas CSS khusus autentikasi di `App.css`: `.auth-card`, `.auth-tabs`,
+  `.auth-required`, `.header-account`, `.account-button`, `.primary-form-link`.
 
 Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
 Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
@@ -333,7 +335,7 @@ build diuji di Chrome headless (CDP) untuk hover/focus tidak membuka, klik
 buka/tutup, rotasi chevron, serta alur mobile. Skrip uji tersebut sementara dan
 sudah dihapus, bukan bagian repo.
 
-## 9. Menjalankan Lokal
+## 10. Menjalankan Lokal
 
 Prasyarat: PHP 8.3+, Composer, MySQL, dan Node.js 22.13+.
 
@@ -369,7 +371,7 @@ Pada komputer development saat ini, Node/NPM tersedia di
 `C:\nvm4w\nodejs`. Jika `npm` tidak ditemukan dari terminal, tambahkan folder
 tersebut ke `PATH` atau jalankan `C:\nvm4w\nodejs\npm.cmd`.
 
-## 10. Verifikasi Sebelum Selesai
+## 11. Verifikasi Sebelum Selesai
 
 Frontend:
 
@@ -385,6 +387,17 @@ php vendor/bin/pint --test
 php artisan test
 php artisan route:list --path=api
 ```
+
+`phpunit.xml` memaksa `DB_CONNECTION=sqlite` dan `DB_DATABASE=:memory:`, jadi
+test tidak pernah menyentuh MySQL `Rumah_brida`. Karena itu ekstensi PHP
+`pdo_sqlite` dan `sqlite3` harus aktif di `php.ini`; tanpa itu `php artisan test`
+gagal dengan "could not find driver".
+
+Feature test yang tersedia: `tests/Feature/AuthApiTest.php` dan
+`tests/Feature/ResearchProposalApiTest.php`. Dua test di file proposal sengaja
+memakai header `Authorization: Bearer` asli, bukan `Sanctum::actingAs`, karena
+`actingAs` menyetel user pada guard default sehingga bug guard tidak terdeteksi.
+Jangan mengganti keduanya menjadi `actingAs`.
 
 Perubahan proposal harus diuji minimal untuk create, validation error, read,
 update tanpa mengganti PDF, dan delete beserta file PDF.
