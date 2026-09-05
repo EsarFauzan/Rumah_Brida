@@ -39,6 +39,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(10)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Hanya admin, dan satu berita bisa mengunggah dua gambar 5 MB.
+        RateLimiter::for('news-write', function (Request $request) {
+            return Limit::perMinute(20)->by($request->user()?->id ?: $request->ip());
+        });
+
         RateLimiter::for('auth', function (Request $request) {
             return [
                 Limit::perMinute(5)->by((string) $request->input('email')),

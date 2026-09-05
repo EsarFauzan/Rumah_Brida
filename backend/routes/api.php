@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\NewsController;
 use App\Http\Controllers\ResearchProposalController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,6 +14,8 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::get('/research-proposals', [ResearchProposalController::class, 'index']);
+Route::get('/news', [NewsController::class, 'index']);
+Route::get('/news/{slug}', [NewsController::class, 'show']);
 Route::get('/research-proposals/{researchProposal}', [ResearchProposalController::class, 'show']);
 
 // Dibuka lewat tab baru browser tanpa bearer token, jadi otorisasinya memakai
@@ -28,4 +31,11 @@ Route::middleware(['auth:sanctum', 'throttle:proposal-write'])->group(function (
     Route::patch('/admin/research-proposals/{researchProposal}/verification', [ResearchProposalController::class, 'review']);
 });
 
+Route::middleware(['auth:sanctum', 'throttle:news-write'])->group(function () {
+    Route::post('/admin/news', [NewsController::class, 'store']);
+    Route::put('/admin/news/{news}', [NewsController::class, 'update']);
+    Route::delete('/admin/news/{news}', [NewsController::class, 'destroy']);
+});
+
 Route::middleware('auth:sanctum')->get('/admin/research-proposals', [ResearchProposalController::class, 'adminIndex']);
+Route::middleware('auth:sanctum')->get('/admin/news', [NewsController::class, 'adminIndex']);

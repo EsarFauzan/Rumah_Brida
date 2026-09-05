@@ -9,7 +9,7 @@ Rumah BRIDA adalah portal Badan Riset dan Inovasi Daerah Sulawesi Tengah.
 Fitur yang sudah tersedia:
 
 - Beranda dengan hero, berita terbaru, navbar, dan footer.
-- Detail berita statis.
+- Berita dari database dan API publik, dengan kelola berita untuk admin.
 - Registrasi dan login peneliti dengan token Sanctum.
 - Pengajuan proposal riset dan simpan draft (wajib login).
 - Halaman Draft Saya untuk melihat, melanjutkan edit, membuka detail/PDF, dan menghapus draft milik sendiri.
@@ -56,6 +56,7 @@ frontend/
   src/hooks/useAuth.js                Hook sesi login (useSyncExternalStore)
   src/pages/LoginPage.jsx             Halaman masuk dan daftar
   src/pages/AdminResearchProposalsPage.jsx Dashboard verifikasi proposal admin
+  src/pages/AdminNewsPage.jsx            Form dan daftar kelola berita admin
   src/pages/NewsDetailPage.jsx        Detail berita
   src/pages/ResearchDraftsPage.jsx    Daftar draft milik akun aktif
   src/pages/ResearchProposalPage.jsx  Form tambah dan edit proposal
@@ -63,24 +64,31 @@ frontend/
   src/pages/ResearchProposalDetailPage.jsx
   src/services/api.js                 Axios base URL dan interceptor token
   src/services/authStore.js           Penyimpanan token di sessionStorage
-  src/data/news.js                    Data berita statis
   src/assets/image/                   Semua gambar aplikasi
 
 backend/
   routes/api.php
   app/Http/Controllers/AuthController.php
+  app/Http/Controllers/NewsController.php
   app/Http/Controllers/ResearchProposalController.php
+  app/Policies/NewsPolicy.php
   app/Policies/ResearchProposalPolicy.php
   app/Providers/AppServiceProvider.php   Definisi rate limiter
+  app/Models/News.php
   app/Models/ResearchProposal.php
   app/Models/User.php
   bootstrap/app.php                      throttleApi()
+  database/factories/NewsFactory.php
+  database/factories/UserFactory.php
+  database/seeders/NewsSeeder.php
   database/migrations/2026_09_02_000000_create_research_proposals_table.php
   database/migrations/2026_09_05_075944_create_personal_access_tokens_table.php
   database/migrations/2026_09_06_000000_add_user_id_to_research_proposals_table.php
   database/migrations/2026_09_07_000000_add_role_to_users_table.php
   database/migrations/2026_09_08_000000_add_verification_fields_to_research_proposals_table.php
+  database/migrations/2026_09_09_000000_create_news_table.php
   tests/Feature/AuthApiTest.php
+  tests/Feature/NewsApiTest.php
   tests/Feature/ResearchProposalApiTest.php
   config/auth.php                        Guard default `sanctum`
   config/cors.php
@@ -101,6 +109,7 @@ backend/
 | `/riset/hasil/{id}` | Detail proposal |
 | `/riset/proposal/{id}/edit` | Edit proposal |
 | `/admin/proposal` | Dashboard verifikasi proposal, khusus admin |
+| `/admin/berita` | Kelola berita, khusus admin |
 
 Routing belum memakai React Router. `App.jsx` membaca `window.location.pathname`
 dan mendengarkan event `popstate`. Jika menambah halaman, tambahkan kondisi di
@@ -197,6 +206,7 @@ Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
 |---|---|---|
 | `api` | 60 per menit per user/IP | Seluruh route API |
 | `proposal-write` | 10 per menit per user/IP | POST/PUT/DELETE proposal |
+| `news-write` | 20 per menit per user/IP | POST/PUT/DELETE berita admin |
 | `auth` | 5 per menit per email dan 20 per menit per IP | Register dan login |
 
 ## 7. API Proposal
@@ -284,6 +294,47 @@ Validasi saat `submit`:
 - File harus PDF dan maksimal 5 MB.
 - Saat update, PDF baru opsional.
 
+## 7B. API Berita
+
+| Method | Endpoint | Auth | Fungsi |
+|---|---|---|---|
+| GET | `/api/news` | publik | Maksimal 3 berita terbit untuk carousel (`limit` opsional) |
+| GET | `/api/news/{slug}` | publik | Detail berita terbit |
+| GET | `/api/admin/news` | wajib admin | Daftar semua berita termasuk draft |
+| POST | `/api/admin/news` | wajib admin | Tambah berita dengan gambar opsional |
+| PUT | `/api/admin/news/{id}` | wajib admin | Edit berita; gambar lama dihapus saat diganti |
+| DELETE | `/api/admin/news/{id}` | wajib admin | Hapus berita dan gambar terkait |
+
+Tabel `news` memiliki `status` `draft|published`. Beranda dan halaman detail
+selalu mengambil data dari API; file frontend `src/data/news.js` sudah dihapus.
+Gambar berita disimpan pada disk `public` di `storage/app/public/news`; jalankan
+`php artisan storage:link` untuk menampilkannya. Seeder `NewsSeeder` memindahkan
+tiga data berita awal tanpa gambar; unggah gambar melalui `/admin/berita`.
+
+Perilaku yang harus dipertahankan:
+
+- `index` hanya mengembalikan `status = published`, diurutkan `latest('published_at')`,
+  dan mengosongkan kolom `content` supaya respons daftar tetap ringan. Parameter
+  `limit` dijepit ke rentang 1-10 agar tidak bisa dipakai menarik seluruh tabel.
+- `show` memakai `firstOrFail()` dengan filter `published`, jadi draft
+  menghasilkan 404 untuk publik, bukan 403.
+- Slug dibuat dari `slug` bila dikirim, jika kosong dari `title`, lewat
+  `Str::slug()` dan divalidasi unik dengan `Rule::unique(...)->ignore($news)`.
+- `published_at` diisi `now()` saat status `published` dan dikosongkan saat
+  `draft`. Saat edit, `published_at` lama dipertahankan supaya tanggal terbit
+  tidak bergeser setiap kali berita disunting.
+- Gambar opsional maksimal 5 MB per file. Saat diganti, file lama dihapus dari
+  disk `public`; saat berita dihapus, kedua gambar ikut dihapus.
+- Frontend mengirim edit lewat `POST` dengan `_method=PUT`, sama seperti proposal.
+
+Otorisasi berada di `NewsPolicy`. `viewAny`, `create`, `update`, dan `delete`
+semuanya hanya untuk role `admin`; peneliti mendapat 403 dan tamu 401. Baca
+publik tidak melewati policy.
+
+Isi berita dirender sebagai teks biasa di React, bukan `dangerouslySetInnerHTML`.
+Jangan mengubahnya menjadi HTML mentah tanpa sanitasi, karena kolom `content`
+diisi lewat form admin dan akan menjadi celah XSS.
+
 ## 8. Database
 
 Tabel utama: `research_proposals`.
@@ -317,6 +368,12 @@ Tabel pendukung: `users` dan `personal_access_tokens` (Sanctum). Kolom
 untuk test atau seeder. Dashboard `/admin/proposal` dan policy `viewAny`/`review`
 sudah tersedia; hanya akun dengan role `admin` yang dapat menggunakannya.
 
+Tabel `news` menyimpan `user_id` (nullable, nullOnDelete), `title`, `card_title`,
+`slug` unik, `category`, `summary`, `content`, `image_path`,
+`secondary_image_path`, `status` (`draft|published`, terindeks), `published_at`
+(nullable, terindeks), dan timestamps. `NewsFactory` default menghasilkan berita
+`published` dengan state `News::factory()->draft()` untuk berita draft.
+
 `user_id` dibuat nullable supaya proposal yang dibuat sebelum autentikasi ada
 tetap tersimpan. Proposal seperti itu hanya bisa dibaca lewat API.
 
@@ -335,10 +392,11 @@ uji yang dibuat sendiri.
 Semua gambar berada di `frontend/src/assets/image/`:
 
 - `Background.jpeg`: hero dan dekorasi beranda.
-- `berita 1.jpeg`: kartu berita dan gambar kedua artikel.
-- `berita 2.jpeg`: gambar utama artikel.
 - `logo_fix.png`: logo navbar.
 - `logo_rumah brida.png`: logo putih footer.
+- `berita 1.jpeg` dan `berita 2.jpeg`: sisa aset berita statis, sudah tidak
+  diimpor kode mana pun sejak berita pindah ke database dan tidak ikut masuk
+  hasil build. Gambar berita sekarang diunggah admin ke disk `public`.
 
 Chevron submenu dibuat dengan CSS melalui `AnimatedChevron.jsx`; tidak memakai
 Lottie atau dependency animasi. Tambahkan item ke array `submenu` di `Header.jsx`
@@ -524,8 +582,9 @@ test tidak pernah menyentuh MySQL `Rumah_brida`. Karena itu ekstensi PHP
 `pdo_sqlite` dan `sqlite3` harus aktif di `php.ini`; tanpa itu `php artisan test`
 gagal dengan "could not find driver".
 
-Feature test yang tersedia: `tests/Feature/AuthApiTest.php` dan
-`tests/Feature/ResearchProposalApiTest.php`. Dua test di file proposal sengaja
+Feature test yang tersedia: `tests/Feature/AuthApiTest.php`,
+`tests/Feature/NewsApiTest.php`, dan `tests/Feature/ResearchProposalApiTest.php`.
+Dua test di file proposal sengaja
 memakai header `Authorization: Bearer` asli, bukan `Sanctum::actingAs`, karena
 `actingAs` menyetel user pada guard default sehingga bug guard tidak terdeteksi.
 Jangan mengganti keduanya menjadi `actingAs`.
@@ -535,22 +594,29 @@ update tanpa mengganti PDF, delete beserta file PDF, dan akses PDF lewat URL
 bertanda tangan (valid, tanpa tanda tangan, kedaluwarsa, dan file hilang).
 Test PDF memakai `Storage::fake('local')`, bukan `Storage::fake('public')`.
 
+Perubahan berita harus diuji minimal untuk daftar publik (hanya `published`,
+`content` kosong, `limit` dijepit), detail publik termasuk draft yang 404,
+penolakan tamu dan peneliti, create dengan slug otomatis serta gambar, draft
+tanpa `published_at`, validasi dan slug duplikat, update yang mempertahankan
+gambar lama lalu menggantinya, delete beserta kedua gambar, dan daftar admin
+yang memuat draft. Test berita memakai `Storage::fake('public')` karena gambar
+berita ada di disk `public`, berbeda dengan PDF proposal.
+
 ## 12. Batasan dan Prioritas Lanjutan
 
 Autentikasi, otorisasi, rate limiting, akses PDF privat, halaman Draft Saya,
-dashboard verifikasi admin, dan dialog konfirmasi hapus proposal sudah selesai
-dan sudah masuk ke branch `main`. Sisa prioritas, diurutkan dari yang paling
-murah dan paling mendesak:
+dashboard verifikasi admin, dialog konfirmasi hapus proposal, serta berita dari
+database dengan kelola berita admin sudah tersedia. Sisa prioritas, diurutkan
+dari yang paling murah dan paling mendesak:
 
-1. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
-2. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
+1. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
    Inovasi/Lomba di `Header.jsx` yang belum memakai garis miring di depan,
    sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
    yang sedang dibuka.
-3. Bangun formulir dan alur menu Lapor.
-4. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
-   `logo_rumah brida.png` masih di atas 500 kB.
-5. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
+2. Bangun formulir dan alur menu Lapor.
+3. Optimalkan gambar besar untuk performa production; `logo_rumah brida.png`
+   masih di atas 500 kB pada hasil build.
+4. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
 
 ## 13. Alur Kerja Git
 
@@ -566,8 +632,10 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
 - `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
 - Branch fitur dihapus setelah merge, di lokal dengan `git branch -d` dan di
   remote dengan `git push origin --delete <branch>`; jangan pakai `-D`.
-- Saat ini hanya `main` yang tersisa di lokal dan remote. Semua branch fitur
-  sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
+- Di lokal dan remote saat ini ada `main` dan branch fitur aktif
+  `feat/news-admin-api` yang membawa berita berbasis database beserta kelola
+  berita admin. Branch fitur lain sudah di-merge dan dihapus:
+  `feat/api-auth-rate-limit` (Sanctum, policy
   proposal, rate limiting, halaman `/masuk`), `feat/pdf-akses-privat` (storage
   privat dan URL bertanda tangan), dan `feat/draft-saya` (halaman Draft Saya,
   pagination, dashboard verifikasi admin, dan `DeleteProposalModal`). Riwayatnya
