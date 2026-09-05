@@ -537,9 +537,10 @@ Test PDF memakai `Storage::fake('local')`, bukan `Storage::fake('public')`.
 
 ## 12. Batasan dan Prioritas Lanjutan
 
-Autentikasi, otorisasi, dan rate limiting sudah selesai dan sudah masuk ke
-branch `main`. Sisa prioritas, diurutkan dari yang paling murah dan paling
-mendesak:
+Autentikasi, otorisasi, rate limiting, akses PDF privat, halaman Draft Saya,
+dashboard verifikasi admin, dan dialog konfirmasi hapus proposal sudah selesai
+dan sudah masuk ke branch `main`. Sisa prioritas, diurutkan dari yang paling
+murah dan paling mendesak:
 
 1. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
 2. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
@@ -563,8 +564,12 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
 - `gh` (GitHub CLI) belum terpasang di komputer development ini, jadi merge
   dijalankan lewat git biasa atau lewat halaman pull request GitHub.
 - `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
-- Branch `feat/api-auth-rate-limit` berisi Sanctum, policy proposal, rate
-  limiting, dan halaman `/masuk`; sudah di-merge ke `main`.
+- Branch fitur dihapus setelah merge, di lokal dengan `git branch -d` dan di
+  remote dengan `git push origin --delete <branch>`; jangan pakai `-D`.
+- Branch yang sudah di-merge ke `main`: `feat/api-auth-rate-limit` (Sanctum,
+  policy proposal, rate limiting, halaman `/masuk`), `feat/pdf-akses-privat`
+  (storage privat dan URL bertanda tangan), dan `feat/draft-saya` (halaman Draft
+  Saya, pagination, dashboard verifikasi admin, dan `DeleteProposalModal`).
 
 ## 14. Aturan Kerja Agent
 
