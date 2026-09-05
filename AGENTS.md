@@ -404,22 +404,45 @@ update tanpa mengganti PDF, dan delete beserta file PDF.
 
 ## 12. Batasan dan Prioritas Lanjutan
 
-Autentikasi, otorisasi, dan rate limiting sudah selesai. Sisa prioritas:
+Autentikasi, otorisasi, dan rate limiting sudah selesai dan sudah masuk ke
+branch `main`. Sisa prioritas, diurutkan dari yang paling murah dan paling
+mendesak:
 
-1. Buat halaman daftar/edit draft milik pengguna (`Draft Saya`).
-2. Tambahkan role peneliti/admin dan alur verifikasi proposal.
-3. Batasi akses file PDF; saat ini file di public storage bisa diakses siapa pun
-   yang punya URL, walau proposalnya masih draft.
-4. Tambahkan pagination pada `GET /api/research-proposals` dan hentikan
+1. Buat halaman daftar/edit draft milik pengguna (`Draft Saya`). Backend sudah
+   mendukung lewat `GET /api/research-proposals?status=all`, jadi sisa
+   pekerjaannya hanya di frontend.
+2. Batasi akses file PDF. Saat ini file di public storage bisa diakses siapa pun
+   yang punya URL walau proposalnya masih draft. Ini lubang privasi yang masih
+   terbuka.
+3. Tambahkan pagination pada `GET /api/research-proposals` dan hentikan
    pengiriman seluruh isi BAB I-III pada respons daftar.
+4. Tambahkan role peneliti/admin dan alur verifikasi proposal.
 5. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
 6. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
-   Inovasi/Lomba yang belum memakai garis miring di depan.
+   Inovasi/Lomba di `Header.jsx` yang belum memakai garis miring di depan,
+   sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
+   yang sedang dibuka.
 7. Bangun formulir dan alur menu Lapor.
-8. Optimalkan gambar JPEG besar untuk performa production.
+8. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
+   `logo_rumah brida.png` masih di atas 500 kB.
 9. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
 
-## 13. Aturan Kerja Agent
+## 13. Alur Kerja Git
+
+Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
+
+- Jangan commit langsung ke `main`. Buat branch fitur seperti
+  `feat/nama-fitur`, lalu push dengan `git push -u origin <branch>`.
+- Selesaikan verifikasi bagian 11 sebelum merge.
+- Merge memakai `git merge --no-ff <branch>` agar riwayat satu fitur tetap
+  terbaca sebagai satu kelompok.
+- `gh` (GitHub CLI) belum terpasang di komputer development ini, jadi merge
+  dijalankan lewat git biasa atau lewat halaman pull request GitHub.
+- `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
+- Branch `feat/api-auth-rate-limit` berisi Sanctum, policy proposal, rate
+  limiting, dan halaman `/masuk`; sudah di-merge ke `main`.
+
+## 14. Aturan Kerja Agent
 
 - Pertahankan desain navy, putih, dan aksen kuning yang sudah digunakan.
 - Gunakan komponen dan pola yang sudah ada sebelum menambah dependency baru.
