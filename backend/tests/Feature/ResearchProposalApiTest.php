@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -22,6 +23,7 @@ class ResearchProposalApiTest extends TestCase
 
     public function test_authenticated_user_can_submit_proposal_with_pdf(): void
     {
+        Storage::fake('local');
         Storage::fake('public');
         $user = User::factory()->create();
         Sanctum::actingAs($user);
@@ -38,7 +40,8 @@ class ResearchProposalApiTest extends TestCase
 
         $proposal = ResearchProposal::sole();
         $this->assertNotNull($proposal->submitted_at);
-        Storage::disk('public')->assertExists($proposal->pdf_path);
+        Storage::disk('local')->assertExists($proposal->pdf_path);
+        Storage::disk('public')->assertMissing($proposal->pdf_path);
     }
 
     public function test_submit_requires_complete_payload(): void
@@ -160,7 +163,7 @@ class ResearchProposalApiTest extends TestCase
 
     public function test_update_keeps_existing_pdf_when_no_new_file_sent(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $user = User::factory()->create();
         $proposal = ResearchProposal::create($this->payload([
             'user_id' => $user->id,
@@ -169,7 +172,7 @@ class ResearchProposalApiTest extends TestCase
             'pdf_path' => 'research-proposals/lama.pdf',
             'pdf_original_name' => 'lama.pdf',
         ], withAction: false));
-        Storage::disk('public')->put('research-proposals/lama.pdf', 'konten');
+        Storage::disk('local')->put('research-proposals/lama.pdf', 'konten');
 
         Sanctum::actingAs($user);
 
@@ -177,7 +180,7 @@ class ResearchProposalApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.pdf_original_name', 'lama.pdf');
 
-        Storage::disk('public')->assertExists('research-proposals/lama.pdf');
+        Storage::disk('local')->assertExists('research-proposals/lama.pdf');
     }
 
     public function test_non_owner_cannot_update_or_delete(): void
@@ -197,7 +200,7 @@ class ResearchProposalApiTest extends TestCase
 
     public function test_owner_can_delete_proposal_and_pdf(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         $user = User::factory()->create();
         $proposal = ResearchProposal::create($this->payload([
             'user_id' => $user->id,
@@ -206,14 +209,14 @@ class ResearchProposalApiTest extends TestCase
             'pdf_path' => 'research-proposals/hapus.pdf',
             'pdf_original_name' => 'hapus.pdf',
         ], withAction: false));
-        Storage::disk('public')->put('research-proposals/hapus.pdf', 'konten');
+        Storage::disk('local')->put('research-proposals/hapus.pdf', 'konten');
 
         Sanctum::actingAs($user);
 
         $this->deleteJson("/api/research-proposals/{$proposal->id}")->assertOk();
 
         $this->assertDatabaseMissing('research_proposals', ['id' => $proposal->id]);
-        Storage::disk('public')->assertMissing('research-proposals/hapus.pdf');
+        Storage::disk('local')->assertMissing('research-proposals/hapus.pdf');
     }
 
     public function test_legacy_proposal_without_owner_cannot_be_modified(): void
@@ -227,6 +230,95 @@ class ResearchProposalApiTest extends TestCase
 
         $this->putJson("/api/research-proposals/{$proposal->id}", ['action' => 'draft'])->assertForbidden();
         $this->deleteJson("/api/research-proposals/{$proposal->id}")->assertForbidden();
+    }
+
+    public function test_pdf_can_be_streamed_with_signed_url(): void
+    {
+        Storage::fake('local');
+        $proposal = $this->proposalWithPdf(['status' => 'submitted', 'submitted_at' => now()]);
+
+        $response = $this->get($this->signedPdfUrl($proposal));
+
+        $response->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+        $this->assertStringContainsString('berkas.pdf', (string) $response->headers->get('content-disposition'));
+    }
+
+    public function test_pdf_cannot_be_streamed_without_valid_signature(): void
+    {
+        Storage::fake('local');
+        $proposal = $this->proposalWithPdf(['status' => 'submitted', 'submitted_at' => now()]);
+
+        $this->get("/api/research-proposals/{$proposal->id}/pdf")->assertForbidden();
+        $this->get($this->signedPdfUrl($proposal).'&extra=1')->assertForbidden();
+    }
+
+    public function test_expired_signed_pdf_url_is_rejected(): void
+    {
+        Storage::fake('local');
+        $proposal = $this->proposalWithPdf(['status' => 'submitted', 'submitted_at' => now()]);
+        $url = $this->signedPdfUrl($proposal);
+
+        $this->travel(31)->minutes();
+
+        $this->get($url)->assertForbidden();
+    }
+
+    public function test_pdf_returns_not_found_when_file_is_missing(): void
+    {
+        Storage::fake('local');
+        $proposal = ResearchProposal::create($this->payload([
+            'status' => 'submitted',
+            'submitted_at' => now(),
+            'pdf_path' => 'research-proposals/hilang.pdf',
+            'pdf_original_name' => 'hilang.pdf',
+        ], withAction: false));
+
+        $this->get($this->signedPdfUrl($proposal))->assertNotFound();
+    }
+
+    public function test_pdf_url_is_signed_api_url_instead_of_public_storage_url(): void
+    {
+        Storage::fake('local');
+        $owner = User::factory()->create();
+        $proposal = $this->proposalWithPdf(['user_id' => $owner->id, 'status' => 'draft']);
+
+        // Draft tetap tertutup untuk orang lain, jadi URL PDF pun tidak terbit.
+        $this->getJson("/api/research-proposals/{$proposal->id}")->assertForbidden();
+
+        Sanctum::actingAs($owner);
+        $pdfUrl = $this->getJson("/api/research-proposals/{$proposal->id}")
+            ->assertOk()
+            ->json('data.pdf_url');
+
+        $this->assertStringContainsString("/api/research-proposals/{$proposal->id}/pdf", $pdfUrl);
+        $this->assertStringContainsString('signature=', $pdfUrl);
+        $this->assertStringNotContainsString('/storage/', $pdfUrl);
+    }
+
+    /**
+     * @param  array<string, mixed>  $overrides
+     */
+    private function proposalWithPdf(array $overrides = []): ResearchProposal
+    {
+        $proposal = ResearchProposal::create($this->payload([
+            'pdf_path' => 'research-proposals/berkas.pdf',
+            'pdf_original_name' => 'berkas.pdf',
+            ...$overrides,
+        ], withAction: false));
+
+        Storage::disk('local')->put('research-proposals/berkas.pdf', '%PDF-1.4 konten uji');
+
+        return $proposal;
+    }
+
+    private function signedPdfUrl(ResearchProposal $proposal): string
+    {
+        return URL::temporarySignedRoute(
+            'research-proposals.pdf',
+            now()->addMinutes(30),
+            ['researchProposal' => $proposal->id],
+        );
     }
 
     /**
