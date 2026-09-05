@@ -26,7 +26,7 @@ Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
 | Backend | Laravel 13, PHP 8.3+ |
 | Autentikasi | Laravel Sanctum 4, bearer token API |
 | Database | MySQL, database `Rumah_brida` |
-| File proposal | Laravel public storage |
+| File proposal | Laravel private storage, disajikan lewat URL bertanda tangan |
 
 Frontend dan backend adalah dua aplikasi terpisah:
 
@@ -36,7 +36,7 @@ Browser
       -> Axios /api
           -> Laravel backend (127.0.0.1:8000)
               -> MySQL Rumah_brida
-              -> storage/app/public/research-proposals
+              -> storage/app/private/research-proposals
 ```
 
 ## 3. Struktur Penting
@@ -182,6 +182,7 @@ http://127.0.0.1:8000/api
 | GET | `/api/research-proposals?status=submitted` | publik | Daftar proposal terkirim |
 | GET | `/api/research-proposals?status=all` | opsional | Submitted plus draft milik sendiri |
 | GET | `/api/research-proposals/{id}` | opsional | Detail; draft hanya untuk pemilik |
+| GET | `/api/research-proposals/{id}/pdf` | tanda tangan URL | Streaming PDF dari storage privat |
 | POST | `/api/research-proposals` | wajib | Tambah draft/submitted |
 | PUT | `/api/research-proposals/{id}` | wajib pemilik | Perbarui |
 | DELETE | `/api/research-proposals/{id}` | wajib pemilik | Hapus data dan PDF |
@@ -189,6 +190,29 @@ http://127.0.0.1:8000/api
 Setiap objek proposal juga memuat `pdf_url` dan `can_manage`. Frontend memakai
 `can_manage` untuk menentukan tampil atau tidaknya tombol Edit dan Hapus, jadi
 UI tidak pernah menampilkan aksi yang akan ditolak backend.
+
+### Akses file PDF
+
+PDF proposal disimpan di disk `local` (`storage/app/private/research-proposals`),
+bukan disk `public`, sehingga tidak pernah terekspos lewat symlink
+`public/storage`. Konstanta `PDF_DISK` dan `PDF_URL_TTL_MINUTES` di
+`ResearchProposalController` memegang nama disk dan masa berlaku URL.
+
+- `pdf_url` bukan lagi URL storage permanen, melainkan URL bertanda tangan
+  sementara ke `research-proposals.pdf` dengan masa berlaku 30 menit. URL itu
+  hanya terbit di respons yang sudah lolos `Gate` (`show` dan `index`), jadi
+  draft orang lain tidak pernah memberikan URL PDF.
+- Route `GET /api/research-proposals/{id}/pdf` memakai middleware `signed`, bukan
+  `Gate::authorize`. Alasannya: tab baru browser tidak mengirim header
+  `Authorization`, sehingga otorisasi bearer token tidak bisa dipakai untuk link
+  `<a href>`. Tanda tangan yang kedaluwarsa, hilang, atau diubah menghasilkan
+  403; `pdf_path` kosong atau file yang tidak ada menghasilkan 404.
+- Respons memakai `Storage::disk(...)->response()` sehingga PDF ditampilkan
+  inline dengan nama asli, dan diberi header `Content-Security-Policy` yang
+  membatasi isi file.
+- Jika di masa depan PDF perlu dibuka tanpa link (mis. viewer di dalam aplikasi),
+  gunakan endpoint ini dengan URL bertanda tangan baru, jangan memindahkan file
+  kembali ke disk `public`.
 
 Otorisasi berada di `ResearchProposalPolicy`:
 
@@ -248,6 +272,12 @@ Tabel pendukung: `users` dan `personal_access_tokens` (Sanctum).
 
 `user_id` dibuat nullable supaya proposal yang dibuat sebelum autentikasi ada
 tetap tersimpan. Proposal seperti itu hanya bisa dibaca lewat API.
+
+`pdf_path` menyimpan path relatif terhadap disk `local`, contoh
+`research-proposals/xxxx.pdf`. File fisiknya ada di
+`backend/storage/app/private/research-proposals`. Kalau disk PDF diganti,
+pastikan file lama ikut dipindahkan dengan path relatif yang sama supaya nilai
+`pdf_path` di MySQL tetap cocok.
 
 Jangan menghapus database, migration, proposal pengguna, atau file storage saat
 melakukan pengujian. Gunakan record dengan judul unik dan bersihkan hanya record
@@ -359,6 +389,9 @@ php artisan storage:link
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
+`storage:link` tidak lagi dibutuhkan untuk PDF proposal karena file itu ada di
+disk privat, tetapi symlink tetap dibuat untuk aset publik lain di masa depan.
+
 Frontend, terminal kedua:
 
 ```powershell
@@ -400,7 +433,9 @@ memakai header `Authorization: Bearer` asli, bukan `Sanctum::actingAs`, karena
 Jangan mengganti keduanya menjadi `actingAs`.
 
 Perubahan proposal harus diuji minimal untuk create, validation error, read,
-update tanpa mengganti PDF, dan delete beserta file PDF.
+update tanpa mengganti PDF, delete beserta file PDF, dan akses PDF lewat URL
+bertanda tangan (valid, tanpa tanda tangan, kedaluwarsa, dan file hilang).
+Test PDF memakai `Storage::fake('local')`, bukan `Storage::fake('public')`.
 
 ## 12. Batasan dan Prioritas Lanjutan
 
@@ -411,21 +446,18 @@ mendesak:
 1. Buat halaman daftar/edit draft milik pengguna (`Draft Saya`). Backend sudah
    mendukung lewat `GET /api/research-proposals?status=all`, jadi sisa
    pekerjaannya hanya di frontend.
-2. Batasi akses file PDF. Saat ini file di public storage bisa diakses siapa pun
-   yang punya URL walau proposalnya masih draft. Ini lubang privasi yang masih
-   terbuka.
-3. Tambahkan pagination pada `GET /api/research-proposals` dan hentikan
+2. Tambahkan pagination pada `GET /api/research-proposals` dan hentikan
    pengiriman seluruh isi BAB I-III pada respons daftar.
-4. Tambahkan role peneliti/admin dan alur verifikasi proposal.
-5. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
-6. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
+3. Tambahkan role peneliti/admin dan alur verifikasi proposal.
+4. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
+5. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
    Inovasi/Lomba di `Header.jsx` yang belum memakai garis miring di depan,
    sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
    yang sedang dibuka.
-7. Bangun formulir dan alur menu Lapor.
-8. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
+6. Bangun formulir dan alur menu Lapor.
+7. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
    `logo_rumah brida.png` masih di atas 500 kB.
-9. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
+8. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
 
 ## 13. Alur Kerja Git
 

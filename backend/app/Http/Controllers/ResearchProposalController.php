@@ -7,11 +7,21 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ResearchProposalController extends Controller
 {
+    /**
+     * Disk privat (storage/app/private), bukan disk `public`, supaya file PDF
+     * tidak bisa diambil langsung lewat URL storage tanpa otorisasi.
+     */
+    private const PDF_DISK = 'local';
+
+    private const PDF_URL_TTL_MINUTES = 30;
+
     public function index(Request $request): JsonResponse
     {
         $status = $request->query('status', 'submitted');
@@ -45,7 +55,7 @@ class ResearchProposalController extends Controller
         $validated = $this->validatePayload($request, $isSubmit, $isSubmit);
 
         $pdfPath = $request->hasFile('pdf')
-            ? $request->file('pdf')->store('research-proposals', 'public')
+            ? $request->file('pdf')->store('research-proposals', self::PDF_DISK)
             : null;
 
         $proposal = ResearchProposal::create([
@@ -100,14 +110,14 @@ class ResearchProposalController extends Controller
         $data['submitted_at'] = $isSubmit ? ($researchProposal->submitted_at ?? now()) : null;
 
         if ($request->hasFile('pdf')) {
-            $data['pdf_path'] = $request->file('pdf')->store('research-proposals', 'public');
+            $data['pdf_path'] = $request->file('pdf')->store('research-proposals', self::PDF_DISK);
             $data['pdf_original_name'] = $request->file('pdf')->getClientOriginalName();
         }
 
         $researchProposal->update($data);
 
         if ($request->hasFile('pdf') && $oldPdfPath) {
-            Storage::disk('public')->delete($oldPdfPath);
+            Storage::disk(self::PDF_DISK)->delete($oldPdfPath);
         }
 
         return response()->json([
@@ -121,12 +131,34 @@ class ResearchProposalController extends Controller
         Gate::authorize('delete', $researchProposal);
 
         if ($researchProposal->pdf_path) {
-            Storage::disk('public')->delete($researchProposal->pdf_path);
+            Storage::disk(self::PDF_DISK)->delete($researchProposal->pdf_path);
         }
 
         $researchProposal->delete();
 
         return response()->json(['message' => 'Proposal berhasil dihapus.']);
+    }
+
+    /**
+     * Otorisasi di sini bersandar pada tanda tangan URL, bukan `Gate`, karena
+     * tab baru browser tidak mengirim bearer token. URL bertanda tangan hanya
+     * dibuat di `serialize()` untuk proposal yang boleh dilihat pemintanya, dan
+     * kedaluwarsa setelah PDF_URL_TTL_MINUTES.
+     */
+    public function pdf(ResearchProposal $researchProposal): StreamedResponse
+    {
+        abort_if(
+            $researchProposal->pdf_path === null
+                || ! Storage::disk(self::PDF_DISK)->exists($researchProposal->pdf_path),
+            404,
+            'File proposal tidak ditemukan.',
+        );
+
+        return Storage::disk(self::PDF_DISK)->response(
+            $researchProposal->pdf_path,
+            $researchProposal->pdf_original_name ?? 'proposal.pdf',
+            ['Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; sandbox"],
+        );
     }
 
     private function validatePayload(Request $request, bool $isSubmit, bool $requirePdf): array
@@ -192,7 +224,11 @@ class ResearchProposalController extends Controller
         return [
             ...$proposal->toArray(),
             'pdf_url' => $proposal->pdf_path
-                ? url(Storage::disk('public')->url($proposal->pdf_path))
+                ? URL::temporarySignedRoute(
+                    'research-proposals.pdf',
+                    now()->addMinutes(self::PDF_URL_TTL_MINUTES),
+                    ['researchProposal' => $proposal->id],
+                )
                 : null,
             'can_manage' => Gate::allows('update', $proposal),
         ];

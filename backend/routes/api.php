@@ -15,6 +15,12 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/research-proposals', [ResearchProposalController::class, 'index']);
 Route::get('/research-proposals/{researchProposal}', [ResearchProposalController::class, 'show']);
 
+// Dibuka lewat tab baru browser tanpa bearer token, jadi otorisasinya memakai
+// tanda tangan URL sementara yang dibuat saat proposal diserialisasi.
+Route::get('/research-proposals/{researchProposal}/pdf', [ResearchProposalController::class, 'pdf'])
+    ->middleware('signed')
+    ->name('research-proposals.pdf');
+
 Route::middleware(['auth:sanctum', 'throttle:proposal-write'])->group(function () {
     Route::post('/research-proposals', [ResearchProposalController::class, 'store']);
     Route::put('/research-proposals/{researchProposal}', [ResearchProposalController::class, 'update']);
