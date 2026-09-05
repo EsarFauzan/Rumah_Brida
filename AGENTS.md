@@ -632,13 +632,13 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
 - `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
 - Branch fitur dihapus setelah merge, di lokal dengan `git branch -d` dan di
   remote dengan `git push origin --delete <branch>`; jangan pakai `-D`.
-- Di lokal dan remote saat ini ada `main` dan branch fitur aktif
-  `feat/news-admin-api` yang membawa berita berbasis database beserta kelola
-  berita admin. Branch fitur lain sudah di-merge dan dihapus:
-  `feat/api-auth-rate-limit` (Sanctum, policy
+- Saat ini hanya `main` yang tersisa di lokal dan remote. Semua branch fitur
+  sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
   proposal, rate limiting, halaman `/masuk`), `feat/pdf-akses-privat` (storage
-  privat dan URL bertanda tangan), dan `feat/draft-saya` (halaman Draft Saya,
-  pagination, dashboard verifikasi admin, dan `DeleteProposalModal`). Riwayatnya
+  privat dan URL bertanda tangan), `feat/draft-saya` (halaman Draft Saya,
+  pagination, dashboard verifikasi admin, dan `DeleteProposalModal`), dan
+  `feat/news-admin-api` (berita berbasis database dan kelola berita admin,
+  masuk lewat pull request #1). Riwayatnya
   tetap terbaca di `main` lewat merge commit masing-masing.
 
 ## 14. Aturan Kerja Agent
