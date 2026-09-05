@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, FileText, LayoutDashboard, LogOut } from 'lucide-react'
+import { ChevronDown, FileText, LayoutDashboard, Newspaper, LogOut } from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo_fix.png'
 import AnimatedChevron from './AnimatedChevron'
 import useAuth from '../hooks/useAuth'
@@ -251,10 +251,13 @@ function Header() {
                 </div>
                 <div className="account-menu-divider" />
                 {user?.role === 'admin' && (
-                  <a className="account-menu-link" href="/admin/proposal" onClick={closeAll}>
-                    <LayoutDashboard size={16} strokeWidth={2.25} aria-hidden="true" />
-                    Dashboard Admin
-                  </a>
+                  <>
+                    <a className="account-menu-link" href="/admin/proposal" onClick={closeAll}>
+                      <LayoutDashboard size={16} strokeWidth={2.25} aria-hidden="true" />
+                      Dashboard Admin
+                    </a>
+                    <a className="account-menu-link" href="/admin/berita" onClick={closeAll}><Newspaper size={16} aria-hidden="true" />Kelola Berita</a>
+                  </>
                 )}
                 <a className="account-menu-link" href="/riset/draft" onClick={closeAll}>
                   <FileText size={16} strokeWidth={2.25} aria-hidden="true" />

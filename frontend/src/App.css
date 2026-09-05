@@ -324,6 +324,13 @@
 .admin-result-item textarea { width: 100%; min-height: 70px; margin-top: 13px; padding: 10px; color: #344054; border: 1px solid #cfd6df; border-radius: 4px; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
 .admin-result-item textarea:focus { border-color: var(--yellow); outline: 2px solid rgba(245, 190, 45, .22); }
 .review-note { margin: 12px 0 0 !important; color: #526173; font-size: 12px !important; }
+.admin-news-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 28px; padding: 24px; background: #fff; border: 1px solid #d9dee7; border-radius: 6px; }
+.admin-news-form input, .admin-news-form textarea, .admin-news-form select { width: 100%; min-height: 40px; padding: 9px 11px; color: #263242; border: 1px solid #cbd2dc; border-radius: 4px; font: inherit; font-size: 13px; }
+.admin-news-form textarea { min-height: 92px; resize: vertical; }
+.admin-news-form textarea[name='content'] { grid-column: 1 / -1; min-height: 190px; }
+.admin-news-form label { color: #526173; font-size: 12px; font-weight: 700; }
+.admin-news-form input[type='file'] { margin-top: 7px; padding: 6px; }
+.admin-news-form .form-actions { grid-column: 1 / -1; justify-content: flex-end; }
 
 .proposal-detail-page { min-height: 740px; padding: 44px 0 82px; background: #f8f9fb; }
 .proposal-detail-container { width: min(920px, calc(100% - 40px)); margin: 0 auto; }
@@ -465,6 +472,7 @@
   .research-results-page { padding: 48px 0 64px; }
   .research-result-item { grid-template-columns: 48px 1fr; align-items: start; gap: 16px; }
   .result-actions { grid-column: 2; justify-content: flex-start; max-width: none; }
+  .admin-news-form { grid-template-columns: 1fr; padding: 18px; }
   .pagination { flex-wrap: wrap; gap: 10px; }
   .proposal-detail-header { flex-direction: column; }
   .proposal-detail-actions { justify-content: flex-start; max-width: none; }

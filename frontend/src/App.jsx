@@ -9,6 +9,7 @@ import ResearchDraftsPage from './pages/ResearchDraftsPage'
 import ResearchResultsPage from './pages/ResearchResultsPage'
 import ResearchProposalDetailPage from './pages/ResearchProposalDetailPage'
 import AdminResearchProposalsPage from './pages/AdminResearchProposalsPage'
+import AdminNewsPage from './pages/AdminNewsPage'
 import Footer from './components/Footer'
 import './App.css'
 
@@ -59,6 +60,7 @@ function App() {
     if (pathname === '/admin/proposal') {
       return <AdminResearchProposalsPage />
     }
+    if (pathname === '/admin/berita') return <AdminNewsPage />
 
     return (
       <>
