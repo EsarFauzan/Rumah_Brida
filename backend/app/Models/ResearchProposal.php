@@ -19,6 +19,10 @@ class ResearchProposal extends Model
         'pdf_path',
         'pdf_original_name',
         'status',
+        'verification_status',
+        'review_note',
+        'reviewed_by_id',
+        'reviewed_at',
         'submitted_at',
     ];
 
@@ -26,6 +30,7 @@ class ResearchProposal extends Model
     {
         return [
             'submitted_at' => 'datetime',
+            'reviewed_at' => 'datetime',
         ];
     }
 

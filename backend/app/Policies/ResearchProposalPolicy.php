@@ -7,6 +7,11 @@ use App\Models\User;
 
 class ResearchProposalPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->role === 'admin';
+    }
+
     /**
      * Hanya pemilik proposal yang boleh melihat detail miliknya sendiri
      * ketika proposal masih berstatus draft.
@@ -28,6 +33,11 @@ class ResearchProposalPolicy
     public function delete(User $user, ResearchProposal $researchProposal): bool
     {
         return $this->owns($user, $researchProposal);
+    }
+
+    public function review(User $user, ResearchProposal $researchProposal): bool
+    {
+        return $user->role === 'admin' && $researchProposal->status === 'submitted';
     }
 
     /**

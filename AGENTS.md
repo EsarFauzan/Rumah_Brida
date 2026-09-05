@@ -12,8 +12,10 @@ Fitur yang sudah tersedia:
 - Detail berita statis.
 - Registrasi dan login peneliti dengan token Sanctum.
 - Pengajuan proposal riset dan simpan draft (wajib login).
+- Halaman Draft Saya untuk melihat, melanjutkan edit, membuka detail/PDF, dan menghapus draft milik sendiri.
 - Daftar hasil/proposal yang sudah dikirim.
-- Detail, edit, lihat PDF, dan hapus proposal (hanya oleh pemilik).
+- Detail, edit, lihat PDF, dan hapus proposal (hanya oleh pemilik). Hapus
+  dikonfirmasi lewat dialog in-app, bukan `window.confirm()`.
 - Tampilan responsif desktop dan mobile.
 
 Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
@@ -46,12 +48,16 @@ frontend/
   src/App.jsx                         Router sederhana berdasarkan pathname
   src/App.css                         Styling seluruh halaman
   src/components/Header.jsx           Navbar, submenu, dan status akun
+  src/components/Pagination.jsx       Kontrol halaman daftar proposal
+  src/components/DeleteProposalModal.jsx Dialog konfirmasi hapus proposal
   src/components/Footer.jsx           Footer global
   src/components/HeroSection.jsx      Hero beranda
   src/components/NewsSection.jsx      Slider berita beranda
   src/hooks/useAuth.js                Hook sesi login (useSyncExternalStore)
   src/pages/LoginPage.jsx             Halaman masuk dan daftar
+  src/pages/AdminResearchProposalsPage.jsx Dashboard verifikasi proposal admin
   src/pages/NewsDetailPage.jsx        Detail berita
+  src/pages/ResearchDraftsPage.jsx    Daftar draft milik akun aktif
   src/pages/ResearchProposalPage.jsx  Form tambah dan edit proposal
   src/pages/ResearchResultsPage.jsx   Daftar proposal submitted
   src/pages/ResearchProposalDetailPage.jsx
@@ -72,6 +78,8 @@ backend/
   database/migrations/2026_09_02_000000_create_research_proposals_table.php
   database/migrations/2026_09_05_075944_create_personal_access_tokens_table.php
   database/migrations/2026_09_06_000000_add_user_id_to_research_proposals_table.php
+  database/migrations/2026_09_07_000000_add_role_to_users_table.php
+  database/migrations/2026_09_08_000000_add_verification_fields_to_research_proposals_table.php
   tests/Feature/AuthApiTest.php
   tests/Feature/ResearchProposalApiTest.php
   config/auth.php                        Guard default `sanctum`
@@ -88,9 +96,11 @@ backend/
 | `/berita/{slug}` | Detail berita |
 | `/masuk` | Masuk dan daftar akun |
 | `/riset/proposal` | Form proposal baru |
+| `/riset/draft` | Daftar draft milik akun aktif |
 | `/riset/hasil` | Daftar proposal terkirim |
 | `/riset/hasil/{id}` | Detail proposal |
 | `/riset/proposal/{id}/edit` | Edit proposal |
+| `/admin/proposal` | Dashboard verifikasi proposal, khusus admin |
 
 Routing belum memakai React Router. `App.jsx` membaca `window.location.pathname`
 dan mendengarkan event `popstate`. Jika menambah halaman, tambahkan kondisi di
@@ -108,11 +118,17 @@ Pengguna masuk atau daftar di /masuk
        -> status `draft`
        -> boleh belum lengkap
        -> hanya terlihat oleh pemiliknya
+       -> tersedia di halaman Draft Saya (`/riset/draft`)
   -> Kirim Proposal
        -> semua field dan PDF wajib
        -> status `submitted`
+       -> verification_status `pending`
        -> tampil di halaman Hasil Riset untuk semua orang
   -> pemilik dapat membuka Detail, Edit, PDF, atau Hapus
+       -> Hapus selalu melewati dialog konfirmasi `DeleteProposalModal`
+  -> admin dapat menyetujui, menolak, atau mengembalikan proposal terkirim ke menunggu
+       -> `approved`, `rejected`, atau `pending`
+       -> catatan wajib jika ditolak
 ```
 
 Tanpa login, halaman Proposal Riset hanya menampilkan kartu ajakan masuk dan
@@ -123,7 +139,16 @@ backend menghapus file lama. Saat proposal dihapus, record MySQL dan PDF ikut
 dihapus. Update sebagian hanya menulis kolom yang benar-benar dikirim, jadi
 menyimpan draft dengan sebagian field tidak mengosongkan data lain.
 
-Draft sudah terhubung ke pemilik, tetapi halaman khusus `Draft Saya` belum ada.
+Halaman `Draft Saya` memanggil `GET /api/research-proposals?status=draft`.
+Endpoint tersebut hanya mengembalikan draft milik akun aktif.
+Saat mengedit draft, tersedia tombol `Simpan Draft` dan `Kirim Proposal` terpisah;
+menyimpan draft tidak mengubah status menjadi `submitted`.
+
+Tombol `Hapus` di Hasil Riset, Draft Saya, dan Detail Proposal tidak lagi memakai
+`window.confirm()`. Ketiganya membuka `DeleteProposalModal` yang menampilkan judul
+proposal, dan permintaan DELETE baru dikirim setelah tombol `Hapus Proposal` di
+dialog ditekan. Logika hapus, endpoint, dan pesan error tidak berubah; yang
+berubah hanya mekanisme konfirmasinya.
 
 ## 6. Autentikasi
 
@@ -144,8 +169,11 @@ token Sanctum, bukan cookie stateful. Konsekuensinya:
 | POST | `/api/auth/logout` | Hapus token yang sedang dipakai |
 | GET | `/api/auth/me` | Data akun yang sedang masuk |
 
-Respons register/login berbentuk `data.user` dan `data.token`. Password minimal
-8 karakter dan wajib `password_confirmation` saat register.
+Respons register/login berbentuk `data.user` dan `data.token`. Objek user memuat
+`id`, `name`, `email`, dan `role`. Password minimal 8 karakter dan wajib
+`password_confirmation` saat register. Pendaftaran publik selalu menghasilkan
+role `researcher`; field `role` dari request tidak boleh dipakai agar pengguna
+tidak dapat mendaftarkan diri sebagai admin.
 
 Sisi frontend:
 
@@ -157,7 +185,9 @@ Sisi frontend:
 - Efek pengambilan data di halaman riset memakai `token` sebagai dependency
   supaya daftar dan detail ikut disegarkan setelah masuk atau keluar.
 - Kelas CSS khusus autentikasi di `App.css`: `.auth-card`, `.auth-tabs`,
-  `.auth-required`, `.header-account`, `.account-button`, `.primary-form-link`.
+  `.auth-required`, `.header-account`, `.account-button`, `.profile-button`,
+  `.account-menu`, `.account-menu-link`, `.account-menu-logout`,
+  `.primary-form-link`.
 
 Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
 Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
@@ -179,17 +209,22 @@ http://127.0.0.1:8000/api
 
 | Method | Endpoint | Auth | Fungsi |
 |---|---|---|---|
-| GET | `/api/research-proposals?status=submitted` | publik | Daftar proposal terkirim |
-| GET | `/api/research-proposals?status=all` | opsional | Submitted plus draft milik sendiri |
+| GET | `/api/research-proposals?status=submitted&page=1&per_page=10` | publik | Daftar proposal terkirim, paginated |
+| GET | `/api/research-proposals?status=draft&page=1` | wajib pemilik | Daftar draft milik sendiri, paginated |
+| GET | `/api/research-proposals?status=all` | opsional | Submitted plus draft milik sendiri, paginated |
 | GET | `/api/research-proposals/{id}` | opsional | Detail; draft hanya untuk pemilik |
 | GET | `/api/research-proposals/{id}/pdf` | tanda tangan URL | Streaming PDF dari storage privat |
 | POST | `/api/research-proposals` | wajib | Tambah draft/submitted |
 | PUT | `/api/research-proposals/{id}` | wajib pemilik | Perbarui |
 | DELETE | `/api/research-proposals/{id}` | wajib pemilik | Hapus data dan PDF |
+| GET | `/api/admin/research-proposals?verification_status=pending` | wajib admin | Daftar proposal untuk verifikasi |
+| PATCH | `/api/admin/research-proposals/{id}/verification` | wajib admin | Setujui, tolak, atau kembalikan ke menunggu |
 
-Setiap objek proposal juga memuat `pdf_url` dan `can_manage`. Frontend memakai
-`can_manage` untuk menentukan tampil atau tidaknya tombol Edit dan Hapus, jadi
-UI tidak pernah menampilkan aksi yang akan ditolak backend.
+Respons daftar selalu berbentuk `data` dan `pagination` (`current_page`,
+`last_page`, `per_page`, `total`). Item daftar adalah ringkasan tanpa BAB I-III;
+isi lengkap hanya tersedia di endpoint detail. Setiap objek juga memuat
+`pdf_url`, `can_manage`, dan `can_review`. Frontend memakai flag tersebut untuk
+menentukan aksi agar UI tidak menampilkan tindakan yang akan ditolak backend.
 
 ### Akses file PDF
 
@@ -218,6 +253,10 @@ Otorisasi berada di `ResearchProposalPolicy`:
 
 - `view`: proposal `submitted` boleh dibaca siapa pun; draft hanya pemilik.
 - `update` dan `delete`: hanya pemilik.
+- `viewAny` dan `review`: hanya role `admin`; admin tidak mendapat hak edit atau
+  hapus proposal peneliti. Admin dapat mengganti status proposal terkirim kapan
+  saja. Saat dikembalikan ke `pending`, catatan dan data peninjau sebelumnya
+  dibersihkan karena belum ada riwayat status terpisah.
 - Proposal lama dengan `user_id` NULL tidak dapat diubah atau dihapus lewat API
   oleh siapa pun.
 
@@ -264,11 +303,19 @@ chapter_three
 pdf_path
 pdf_original_name
 status: draft | submitted
+verification_status: pending | approved | rejected
+review_note: nullable, wajib saat rejected
+reviewed_by_id: nullable, foreign key ke users, nullOnDelete
+reviewed_at: nullable
 submitted_at
 created_at, updated_at
 ```
 
-Tabel pendukung: `users` dan `personal_access_tokens` (Sanctum).
+Tabel pendukung: `users` dan `personal_access_tokens` (Sanctum). Kolom
+`users.role` memiliki default `researcher`; nilai yang disiapkan adalah
+`researcher` dan `admin`. Factory menyediakan state `User::factory()->admin()`
+untuk test atau seeder. Dashboard `/admin/proposal` dan policy `viewAny`/`review`
+sudah tersedia; hanya akun dengan role `admin` yang dapat menggunakannya.
 
 `user_id` dibuat nullable supaya proposal yang dibuat sebelum autentikasi ada
 tetap tersimpan. Proposal seperti itu hanya bisa dibaca lewat API.
@@ -340,9 +387,18 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
   `/riset/proposal`. Navigasi tetap tersedia lewat item submenu.
 - `li` mendapat kelas `is-open` saat submenu aktif; `AnimatedChevron` menerima
   prop `open` yang menambah kelas `is-open` pada `.chevron-icon`.
-- `useEffect` (aktif hanya saat ada submenu terbuka) menutup submenu pada
-  `pointerdown` di luar `headerRef` dan pada tombol `Escape`, dengan fokus
-  dikembalikan ke trigger. Tombol hamburger ikut mereset `openMenu`.
+- `useEffect` aktif saat submenu atau menu akun terbuka. Klik di luar header
+  menutup keduanya, sedangkan klik di luar area akun menutup dropdown akun.
+  Tombol Escape mengembalikan fokus ke trigger yang aktif. Tombol hamburger
+  ikut mereset submenu dan dropdown akun.
+- Saat masuk, area kanan setelah tombol `Lapor` menggunakan satu tombol profil
+  `.profile-button` berisi avatar inisial dari nama pengguna dan chevron.
+  Dropdown `.account-menu` menampilkan nama, email atau role, serta aksi logout
+  dengan ikon `LogOut` dari `lucide-react`. Akses `Draft Saya` berada di
+  dropdown ini memakai ikon `FileText`, sehingga submenu Riset hanya berisi
+  `Proposal Riset` dan `Hasil Riset`; jangan mengubah fungsi `logout()`.
+  Dropdown tertutup saat klik di luar area akun, Escape, membuka submenu Riset,
+  atau membuka menu mobile. Pada Escape, fokus kembali ke tombol profil.
 
 `App.css`:
 
@@ -364,6 +420,48 @@ Verifikasi terakhir: `npm run lint` bersih, `npm run build` sukses, dan hasil
 build diuji di Chrome headless (CDP) untuk hover/focus tidak membuka, klik
 buka/tutup, rotasi chevron, serta alur mobile. Skrip uji tersebut sementara dan
 sudah dihapus, bukan bagian repo.
+
+### Dialog konfirmasi hapus proposal
+
+`DeleteProposalModal.jsx` adalah satu-satunya dialog konfirmasi hapus proposal
+dan dipakai bersama oleh `ResearchResultsPage.jsx`, `ResearchDraftsPage.jsx`,
+serta `ResearchProposalDetailPage.jsx`. Props: `open`, `proposalTitle`,
+`isDeleting`, `onCancel`, dan `onConfirm`. Judul proposal wajib dinamis; jika
+kosong, komponen menampilkan `proposal tanpa judul`.
+
+Perilaku yang harus dipertahankan:
+
+- Terbuka hanya lewat tombol `Hapus`; DELETE dikirim setelah `Hapus Proposal`.
+- Tertutup lewat `Batal`, tombol X, klik overlay, dan Escape. Klik di dalam
+  kartu tidak menutup karena overlay memeriksa
+  `event.target === event.currentTarget` pada `mousedown`.
+- Fokus awal ke `Batal`; Tab dan Shift+Tab terkurung di dalam dialog; setelah
+  tertutup fokus kembali ke tombol `Hapus` pemicunya.
+- `document.body` dikunci `overflow: hidden` dengan padding kanan sebesar lebar
+  scrollbar, lalu dikembalikan ke nilai semula saat dialog ditutup.
+- Selama `isDeleting`, ketiga tombol `disabled`, tombol destruktif menampilkan
+  `.modal-spinner` dan teks `Menghapus...`, serta Escape dan klik overlay
+  diabaikan supaya proses hapus tidak terputus.
+- Halaman pemanggil memakai guard `if (deletingId !== null) return` (detail:
+  `if (isDeleting) return`) supaya klik ganda tidak mengirim DELETE dua kali.
+
+Kelas CSS di `App.css`: `.modal-overlay`, `.modal-card`, `.modal-close`,
+`.modal-icon`, `.modal-title`, `.modal-description`, `.modal-target`,
+`.modal-warning`, `.modal-actions`, `.modal-button`, `.modal-button.is-danger`,
+dan `.modal-spinner`. Keyframes `modal-fade`, `modal-pop`, dan `modal-spin`.
+Modal memakai CSS biasa dengan token warna yang sudah ada, bukan Tailwind; merah
+hanya dipakai untuk ikon sampah, tombol destruktif, dan kotak peringatan. Pada
+lebar maksimal 760px `.modal-actions` menjadi `column-reverse` dan tombol
+melebar penuh, sehingga `Hapus Proposal` berada di atas `Batal`.
+`prefers-reduced-motion: reduce` mematikan animasi overlay/kartu dan
+memperlambat spinner.
+
+Verifikasi terakhir dialog ini: `npm run lint` bersih, `npm run build` sukses,
+dan alur diuji langsung di browser memakai akun uji sementara untuk buka/tutup
+via empat cara, focus trap, scroll lock, pengembalian fokus, state `isDeleting`
+(DELETE diperlambat lewat intersepsi request), dua penghapusan nyata dari Draft
+Saya dan Hasil Riset, satu penghapusan dari halaman detail yang mengarahkan ke
+`/riset/hasil`, serta tata letak 390px. Akun dan proposal uji sudah dihapus.
 
 ## 10. Menjalankan Lokal
 
@@ -443,21 +541,15 @@ Autentikasi, otorisasi, dan rate limiting sudah selesai dan sudah masuk ke
 branch `main`. Sisa prioritas, diurutkan dari yang paling murah dan paling
 mendesak:
 
-1. Buat halaman daftar/edit draft milik pengguna (`Draft Saya`). Backend sudah
-   mendukung lewat `GET /api/research-proposals?status=all`, jadi sisa
-   pekerjaannya hanya di frontend.
-2. Tambahkan pagination pada `GET /api/research-proposals` dan hentikan
-   pengiriman seluruh isi BAB I-III pada respons daftar.
-3. Tambahkan role peneliti/admin dan alur verifikasi proposal.
-4. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
-5. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
+1. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
+2. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
    Inovasi/Lomba di `Header.jsx` yang belum memakai garis miring di depan,
    sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
    yang sedang dibuka.
-6. Bangun formulir dan alur menu Lapor.
-7. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
+3. Bangun formulir dan alur menu Lapor.
+4. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
    `logo_rumah brida.png` masih di atas 500 kB.
-8. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
+5. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
 
 ## 13. Alur Kerja Git
 

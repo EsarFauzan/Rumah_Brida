@@ -37,7 +37,7 @@ class AuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
-        ]);
+        ])->refresh();
 
         return response()->json([
             'message' => 'Pendaftaran berhasil.',
@@ -103,6 +103,7 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'role' => $user->role,
         ];
     }
 }

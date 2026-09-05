@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronDown, FileText, LayoutDashboard, LogOut } from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo_fix.png'
 import AnimatedChevron from './AnimatedChevron'
 import useAuth from '../hooks/useAuth'
@@ -20,6 +21,18 @@ const menuItems = [
 ]
 
 const submenuId = (label) => `submenu-${label.toLowerCase().replace(/\s+/g, '-')}`
+
+const getInitials = (name) => {
+  const initials = name
+    ?.trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+
+  return initials || 'A'
+}
 
 const getActiveMenu = () => {
   const { hash, pathname } = window.location
@@ -47,17 +60,22 @@ function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [openMenu, setOpenMenu] = useState(null)
   const [activeMenu, setActiveMenu] = useState(getActiveMenu)
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const { isAuthenticated, user } = useAuth()
   const headerRef = useRef(null)
+  const accountRef = useRef(null)
+  const accountButtonRef = useRef(null)
 
   const closeAll = () => {
     setIsOpen(false)
     setOpenMenu(null)
+    setIsAccountMenuOpen(false)
   }
 
   const toggleSubmenu = (label) => {
     setOpenMenu((current) => (current === label ? null : label))
+    setIsAccountMenuOpen(false)
   }
 
   const logout = async () => {
@@ -77,13 +95,20 @@ function Header() {
   }
 
   useEffect(() => {
-    if (!openMenu) {
+    if (!openMenu && !isAccountMenuOpen) {
       return undefined
     }
 
     const handlePointerDown = (event) => {
       if (!headerRef.current?.contains(event.target)) {
+        setIsOpen(false)
         setOpenMenu(null)
+        setIsAccountMenuOpen(false)
+        return
+      }
+
+      if (isAccountMenuOpen && !accountRef.current?.contains(event.target)) {
+        setIsAccountMenuOpen(false)
       }
     }
 
@@ -92,8 +117,15 @@ function Header() {
         return
       }
 
-      headerRef.current?.querySelector('.nav-trigger[aria-expanded="true"]')?.focus()
+      if (isAccountMenuOpen) {
+        accountButtonRef.current?.focus()
+      } else {
+        headerRef.current?.querySelector('.nav-trigger[aria-expanded="true"]')?.focus()
+      }
+
+      setIsOpen(false)
       setOpenMenu(null)
+      setIsAccountMenuOpen(false)
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -103,7 +135,7 @@ function Header() {
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [openMenu])
+  }, [isAccountMenuOpen, openMenu])
 
   useEffect(() => {
     const syncActiveMenu = () => setActiveMenu(getActiveMenu())
@@ -128,6 +160,7 @@ function Header() {
           aria-expanded={isOpen} onClick={() => {
             setIsOpen((current) => !current)
             setOpenMenu(null)
+            setIsAccountMenuOpen(false)
           }}>
           <span /><span /><span />
         </button>
@@ -192,13 +225,46 @@ function Header() {
 
         <a className="report-button" href="#lapor">Lapor</a>
 
-        <div className="header-account">
+        <div className={`header-account${isAccountMenuOpen ? ' is-open' : ''}`} ref={accountRef}>
           {isAuthenticated ? (
             <>
-              <span title={user?.email ?? ''}>{user?.name ?? 'Akun'}</span>
-              <button className="account-button" type="button" disabled={isLoggingOut} onClick={logout}>
-                {isLoggingOut ? 'Keluar...' : 'Keluar'}
+              <button
+                className="profile-button"
+                type="button"
+                aria-label="Buka menu akun"
+                aria-expanded={isAccountMenuOpen}
+                aria-controls="account-menu"
+                ref={accountButtonRef}
+                onClick={() => {
+                  setIsAccountMenuOpen((current) => !current)
+                  setIsOpen(false)
+                  setOpenMenu(null)
+                }}
+              >
+                <span className="account-avatar" aria-hidden="true">{getInitials(user?.name)}</span>
+                <ChevronDown className="account-chevron" size={16} strokeWidth={2.5} aria-hidden="true" />
               </button>
+              <div className="account-menu" id="account-menu" aria-hidden={!isAccountMenuOpen}>
+                <div className="account-menu-info">
+                  <strong>{user?.name ?? 'Akun BRIDA'}</strong>
+                  <span>{user?.email ?? user?.role ?? 'Peneliti'}</span>
+                </div>
+                <div className="account-menu-divider" />
+                {user?.role === 'admin' && (
+                  <a className="account-menu-link" href="/admin/proposal" onClick={closeAll}>
+                    <LayoutDashboard size={16} strokeWidth={2.25} aria-hidden="true" />
+                    Dashboard Admin
+                  </a>
+                )}
+                <a className="account-menu-link" href="/riset/draft" onClick={closeAll}>
+                  <FileText size={16} strokeWidth={2.25} aria-hidden="true" />
+                  Draft Saya
+                </a>
+                <button className="account-menu-logout" type="button" disabled={isLoggingOut} onClick={logout}>
+                  <LogOut size={16} strokeWidth={2.25} aria-hidden="true" />
+                  {isLoggingOut ? 'Keluar...' : 'Keluar'}
+                </button>
+              </div>
             </>
           ) : (
             <a className="account-button" href="/masuk" onClick={closeAll}>Masuk</a>

@@ -5,8 +5,10 @@ import NewsSection from './components/NewsSection'
 import NewsDetailPage from './pages/NewsDetailPage'
 import LoginPage from './pages/LoginPage'
 import ResearchProposalPage from './pages/ResearchProposalPage'
+import ResearchDraftsPage from './pages/ResearchDraftsPage'
 import ResearchResultsPage from './pages/ResearchResultsPage'
 import ResearchProposalDetailPage from './pages/ResearchProposalDetailPage'
+import AdminResearchProposalsPage from './pages/AdminResearchProposalsPage'
 import Footer from './components/Footer'
 import './App.css'
 
@@ -46,8 +48,16 @@ function App() {
       return <ResearchProposalPage />
     }
 
+    if (pathname === '/riset/draft') {
+      return <ResearchDraftsPage />
+    }
+
     if (pathname === '/riset/hasil') {
       return <ResearchResultsPage />
+    }
+
+    if (pathname === '/admin/proposal') {
+      return <AdminResearchProposalsPage />
     }
 
     return (

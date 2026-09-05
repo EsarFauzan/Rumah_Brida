@@ -80,6 +80,32 @@ class ResearchProposalApiTest extends TestCase
             ->assertJsonCount(1, 'data');
     }
 
+    public function test_proposal_list_is_paginated_and_does_not_include_chapters(): void
+    {
+        $owner = User::factory()->create();
+
+        foreach (range(1, 11) as $index) {
+            ResearchProposal::create($this->payload([
+                'user_id' => $owner->id,
+                'proposal_title' => "Proposal pagination {$index}",
+                'status' => 'submitted',
+                'submitted_at' => now(),
+            ], withAction: false));
+        }
+
+        $response = $this->getJson('/api/research-proposals?per_page=10');
+
+        $response->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('pagination.current_page', 1)
+            ->assertJsonPath('pagination.last_page', 2)
+            ->assertJsonPath('pagination.total', 11);
+
+        $this->assertArrayNotHasKey('chapter_one', $response->json('data.0'));
+        $this->assertArrayNotHasKey('chapter_two', $response->json('data.0'));
+        $this->assertArrayNotHasKey('chapter_three', $response->json('data.0'));
+    }
+
     public function test_draft_is_hidden_from_guests(): void
     {
         ResearchProposal::create($this->payload([
@@ -90,6 +116,8 @@ class ResearchProposalApiTest extends TestCase
         $this->getJson('/api/research-proposals?status=all')
             ->assertOk()
             ->assertJsonCount(0, 'data');
+
+        $this->getJson('/api/research-proposals?status=draft')->assertUnauthorized();
     }
 
     public function test_draft_detail_is_forbidden_for_non_owner(): void
@@ -230,6 +258,53 @@ class ResearchProposalApiTest extends TestCase
 
         $this->putJson("/api/research-proposals/{$proposal->id}", ['action' => 'draft'])->assertForbidden();
         $this->deleteJson("/api/research-proposals/{$proposal->id}")->assertForbidden();
+    }
+
+    public function test_researcher_cannot_open_admin_proposal_list(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->getJson('/api/admin/research-proposals')->assertForbidden();
+    }
+
+    public function test_admin_can_approve_or_reject_submitted_proposal(): void
+    {
+        $proposal = ResearchProposal::create($this->payload([
+            'user_id' => User::factory()->create()->id,
+            'status' => 'submitted',
+            'submitted_at' => now(),
+        ], withAction: false));
+        $admin = User::factory()->admin()->create();
+        Sanctum::actingAs($admin);
+
+        $this->getJson('/api/admin/research-proposals?verification_status=pending')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.can_review', true);
+
+        $this->patchJson("/api/admin/research-proposals/{$proposal->id}/verification", [
+            'verification_status' => 'approved',
+        ])->assertOk()->assertJsonPath('data.verification_status', 'approved');
+
+        $this->assertDatabaseHas('research_proposals', [
+            'id' => $proposal->id,
+            'verification_status' => 'approved',
+            'reviewed_by_id' => $admin->id,
+        ]);
+
+        $this->patchJson("/api/admin/research-proposals/{$proposal->id}/verification", [
+            'verification_status' => 'rejected',
+        ])->assertStatus(422)->assertJsonValidationErrors(['review_note']);
+
+        $this->patchJson("/api/admin/research-proposals/{$proposal->id}/verification", [
+            'verification_status' => 'pending',
+        ])->assertOk()->assertJsonPath('data.verification_status', 'pending');
+
+        $this->assertDatabaseHas('research_proposals', [
+            'id' => $proposal->id,
+            'verification_status' => 'pending',
+            'reviewed_by_id' => null,
+        ]);
     }
 
     public function test_pdf_can_be_streamed_with_signed_url(): void

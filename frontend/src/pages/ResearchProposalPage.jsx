@@ -28,6 +28,7 @@ function ResearchProposalPage({ proposalId = null }) {
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(Boolean(proposalId))
   const [existingPdfName, setExistingPdfName] = useState('')
+  const [proposalStatus, setProposalStatus] = useState('draft')
   const { isAuthenticated } = useAuth()
   const isEditing = Boolean(proposalId)
 
@@ -48,6 +49,7 @@ function ResearchProposalPage({ proposalId = null }) {
           pdf: null,
         })
         setExistingPdfName(proposal.pdf_original_name ?? '')
+        setProposalStatus(proposal.status ?? 'draft')
       })
       .catch(() => setFeedback({ type: 'error', message: 'Proposal yang akan diedit tidak dapat dimuat.' }))
       .finally(() => setIsLoading(false))
@@ -80,12 +82,14 @@ function ResearchProposalPage({ proposalId = null }) {
 
       if (!isEditing) setForm(initialForm)
 
-      if (isEditing || action === 'submit') {
-        window.setTimeout(() => {
-          window.history.pushState({}, '', isEditing ? `/riset/hasil/${proposalId}` : '/riset/hasil')
-          window.dispatchEvent(new PopStateEvent('popstate'))
-        }, 700)
-      }
+      window.setTimeout(() => {
+        const destination = action === 'draft'
+          ? '/riset/draft'
+          : isEditing ? `/riset/hasil/${proposalId}` : '/riset/hasil'
+
+        window.history.pushState({}, '', destination)
+        window.dispatchEvent(new PopStateEvent('popstate'))
+      }, 700)
     } catch (error) {
       if (error.response?.status === 422) {
         const validationErrors = error.response.data.errors ?? {}
@@ -186,12 +190,15 @@ function ResearchProposalPage({ proposalId = null }) {
 
           <div className="form-actions">
             {isEditing ? (
-              <a className="secondary-form-link" href={`/riset/hasil/${proposalId}`}>Batal</a>
+              <a className="secondary-form-link" href={proposalStatus === 'draft' ? '/riset/draft' : `/riset/hasil/${proposalId}`}>Batal</a>
             ) : (
               <button className="secondary-form-button" type="button" disabled={isSaving} onClick={() => submitProposal('draft')}>Simpan Draft</button>
             )}
+            {isEditing && proposalStatus === 'draft' && (
+              <button className="secondary-form-button" type="button" disabled={isSaving} onClick={() => submitProposal('draft')}>Simpan Draft</button>
+            )}
             <button className="primary-form-button" type="button" disabled={isSaving} onClick={() => submitProposal('submit')}>
-              {isSaving ? 'Menyimpan...' : isEditing ? 'Simpan Perubahan' : 'Kirim Proposal'}
+              {isSaving ? 'Menyimpan...' : isEditing && proposalStatus !== 'draft' ? 'Simpan Perubahan' : 'Kirim Proposal'}
             </button>
           </div>
         </form>
