@@ -10,9 +10,10 @@ Fitur yang sudah tersedia:
 
 - Beranda dengan hero, berita terbaru, navbar, dan footer.
 - Detail berita statis.
-- Pengajuan proposal riset dan simpan draft.
+- Registrasi dan login peneliti dengan token Sanctum.
+- Pengajuan proposal riset dan simpan draft (wajib login).
 - Daftar hasil/proposal yang sudah dikirim.
-- Detail, edit, lihat PDF, dan hapus proposal.
+- Detail, edit, lihat PDF, dan hapus proposal (hanya oleh pemilik).
 - Tampilan responsif desktop dan mobile.
 
 Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
@@ -21,8 +22,9 @@ Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
 
 | Bagian | Teknologi |
 |---|---|
-| Frontend | React 19, Vite 8, Axios, CSS biasa |
+| Frontend | React 19, Vite 8, Axios, lucide-react, react-icons, CSS biasa |
 | Backend | Laravel 13, PHP 8.3+ |
+| Autentikasi | Laravel Sanctum 4, bearer token API |
 | Database | MySQL, database `Rumah_brida` |
 | File proposal | Laravel public storage |
 
@@ -43,24 +45,38 @@ Browser
 frontend/
   src/App.jsx                         Router sederhana berdasarkan pathname
   src/App.css                         Styling seluruh halaman
-  src/components/Header.jsx           Navbar dan submenu
+  src/components/Header.jsx           Navbar, submenu, dan status akun
   src/components/Footer.jsx           Footer global
   src/components/HeroSection.jsx      Hero beranda
   src/components/NewsSection.jsx      Slider berita beranda
+  src/hooks/useAuth.js                Hook sesi login (useSyncExternalStore)
+  src/pages/LoginPage.jsx             Halaman masuk dan daftar
   src/pages/NewsDetailPage.jsx        Detail berita
   src/pages/ResearchProposalPage.jsx  Form tambah dan edit proposal
   src/pages/ResearchResultsPage.jsx   Daftar proposal submitted
   src/pages/ResearchProposalDetailPage.jsx
-  src/services/api.js                 Axios base URL
+  src/services/api.js                 Axios base URL dan interceptor token
+  src/services/authStore.js           Penyimpanan token di sessionStorage
   src/data/news.js                    Data berita statis
   src/assets/image/                   Semua gambar aplikasi
 
 backend/
   routes/api.php
+  app/Http/Controllers/AuthController.php
   app/Http/Controllers/ResearchProposalController.php
+  app/Policies/ResearchProposalPolicy.php
+  app/Providers/AppServiceProvider.php   Definisi rate limiter
   app/Models/ResearchProposal.php
+  app/Models/User.php
+  bootstrap/app.php                      throttleApi()
   database/migrations/2026_09_02_000000_create_research_proposals_table.php
+  database/migrations/2026_09_05_075944_create_personal_access_tokens_table.php
+  database/migrations/2026_09_06_000000_add_user_id_to_research_proposals_table.php
+  tests/Feature/AuthApiTest.php
+  tests/Feature/ResearchProposalApiTest.php
+  config/auth.php                        Guard default `sanctum`
   config/cors.php
+  config/sanctum.php
   .env.example
 ```
 
@@ -70,6 +86,7 @@ backend/
 |---|---|
 | `/` | Beranda |
 | `/berita/{slug}` | Detail berita |
+| `/masuk` | Masuk dan daftar akun |
 | `/riset/proposal` | Form proposal baru |
 | `/riset/hasil` | Daftar proposal terkirim |
 | `/riset/hasil/{id}` | Detail proposal |
@@ -83,27 +100,76 @@ frontend kembali ke `frontend/index.html`.
 ## 5. Alur Proposal Riset
 
 ```text
-Pengguna membuka Proposal Riset
+Pengguna masuk atau daftar di /masuk
+  -> token Sanctum disimpan di sessionStorage
+  -> membuka Proposal Riset
   -> mengisi identitas, BAB I-III, koordinat, dan PDF
   -> Simpan Draft
        -> status `draft`
        -> boleh belum lengkap
-       -> tidak tampil di halaman Hasil Riset
+       -> hanya terlihat oleh pemiliknya
   -> Kirim Proposal
        -> semua field dan PDF wajib
        -> status `submitted`
-       -> tampil di halaman Hasil Riset
-  -> pengguna dapat membuka Detail, Edit, PDF, atau Hapus
+       -> tampil di halaman Hasil Riset untuk semua orang
+  -> pemilik dapat membuka Detail, Edit, PDF, atau Hapus
 ```
+
+Tanpa login, halaman Proposal Riset hanya menampilkan kartu ajakan masuk dan
+API menolak POST/PUT/DELETE dengan status 401.
 
 Saat edit, PDF lama tetap digunakan jika tidak ada file baru. Jika PDF diganti,
 backend menghapus file lama. Saat proposal dihapus, record MySQL dan PDF ikut
-dihapus.
+dihapus. Update sebagian hanya menulis kolom yang benar-benar dikirim, jadi
+menyimpan draft dengan sebagian field tidak mengosongkan data lain.
 
-Draft sudah dapat disimpan, tetapi belum ada halaman `Draft Saya` dan belum
-terhubung ke pemilik karena autentikasi belum dibuat.
+Draft sudah terhubung ke pemilik, tetapi halaman khusus `Draft Saya` belum ada.
 
-## 6. API Proposal
+## 6. Autentikasi
+
+Frontend dan backend berjalan di port berbeda, jadi autentikasi memakai bearer
+token Sanctum, bukan cookie stateful. Konsekuensinya:
+
+- `config/auth.php` memakai guard default `sanctum`. Ini wajib. Dengan guard
+  `web`, route baca publik seperti `GET /api/research-proposals` tidak membaca
+  bearer token sehingga `$request->user()` dan `Gate` selalu null, dan field
+  `can_manage` selalu `false` walau pemiliknya sendiri yang membuka.
+- `config/cors.php` memakai `supports_credentials => false`. Jangan diubah
+  selama masih memakai token.
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| POST | `/api/auth/register` | Daftar, mengembalikan user dan token |
+| POST | `/api/auth/login` | Masuk, mengembalikan user dan token |
+| POST | `/api/auth/logout` | Hapus token yang sedang dipakai |
+| GET | `/api/auth/me` | Data akun yang sedang masuk |
+
+Respons register/login berbentuk `data.user` dan `data.token`. Password minimal
+8 karakter dan wajib `password_confirmation` saat register.
+
+Sisi frontend:
+
+- `services/authStore.js` menyimpan token di `sessionStorage` dengan kunci
+  `rumah-brida-auth` dan memberi tahu pelanggan lewat listener sederhana.
+- `hooks/useAuth.js` membaca store itu dengan `useSyncExternalStore`.
+- `services/api.js` menyisipkan header `Authorization: Bearer <token>` dan
+  membersihkan sesi otomatis saat respons 401.
+- Efek pengambilan data di halaman riset memakai `token` sebagai dependency
+  supaya daftar dan detail ikut disegarkan setelah masuk atau keluar.
+- Kelas CSS khusus autentikasi di `App.css`: `.auth-card`, `.auth-tabs`,
+  `.auth-required`, `.header-account`, `.account-button`, `.primary-form-link`.
+
+Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
+Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
+`throttleApi()` di `bootstrap/app.php` akan melempar exception.
+
+| Limiter | Batas | Dipakai di |
+|---|---|---|
+| `api` | 60 per menit per user/IP | Seluruh route API |
+| `proposal-write` | 10 per menit per user/IP | POST/PUT/DELETE proposal |
+| `auth` | 5 per menit per email dan 20 per menit per IP | Register dan login |
+
+## 7. API Proposal
 
 Base URL frontend diambil dari `VITE_API_URL`, dengan fallback:
 
@@ -111,14 +177,25 @@ Base URL frontend diambil dari `VITE_API_URL`, dengan fallback:
 http://127.0.0.1:8000/api
 ```
 
-| Method | Endpoint | Fungsi |
-|---|---|---|
-| GET | `/api/research-proposals?status=submitted` | Daftar proposal terkirim |
-| GET | `/api/research-proposals?status=all` | Semua status |
-| GET | `/api/research-proposals/{id}` | Detail |
-| POST | `/api/research-proposals` | Tambah draft/submitted |
-| PUT | `/api/research-proposals/{id}` | Perbarui |
-| DELETE | `/api/research-proposals/{id}` | Hapus data dan PDF |
+| Method | Endpoint | Auth | Fungsi |
+|---|---|---|---|
+| GET | `/api/research-proposals?status=submitted` | publik | Daftar proposal terkirim |
+| GET | `/api/research-proposals?status=all` | opsional | Submitted plus draft milik sendiri |
+| GET | `/api/research-proposals/{id}` | opsional | Detail; draft hanya untuk pemilik |
+| POST | `/api/research-proposals` | wajib | Tambah draft/submitted |
+| PUT | `/api/research-proposals/{id}` | wajib pemilik | Perbarui |
+| DELETE | `/api/research-proposals/{id}` | wajib pemilik | Hapus data dan PDF |
+
+Setiap objek proposal juga memuat `pdf_url` dan `can_manage`. Frontend memakai
+`can_manage` untuk menentukan tampil atau tidaknya tombol Edit dan Hapus, jadi
+UI tidak pernah menampilkan aksi yang akan ditolak backend.
+
+Otorisasi berada di `ResearchProposalPolicy`:
+
+- `view`: proposal `submitted` boleh dibaca siapa pun; draft hanya pemilik.
+- `update` dan `delete`: hanya pemilik.
+- Proposal lama dengan `user_id` NULL tidak dapat diubah atau dihapus lewat API
+  oleh siapa pun.
 
 Request tambah/edit memakai `multipart/form-data` dengan field:
 
@@ -144,7 +221,7 @@ Validasi saat `submit`:
 - File harus PDF dan maksimal 5 MB.
 - Saat update, PDF baru opsional.
 
-## 7. Database
+## 8. Database
 
 Tabel utama: `research_proposals`.
 
@@ -152,6 +229,7 @@ Kolom penting:
 
 ```text
 id
+user_id: nullable, foreign key ke users, nullOnDelete
 researcher_name
 proposal_title
 institution
@@ -166,11 +244,16 @@ submitted_at
 created_at, updated_at
 ```
 
+Tabel pendukung: `users` dan `personal_access_tokens` (Sanctum).
+
+`user_id` dibuat nullable supaya proposal yang dibuat sebelum autentikasi ada
+tetap tersimpan. Proposal seperti itu hanya bisa dibaca lewat API.
+
 Jangan menghapus database, migration, proposal pengguna, atau file storage saat
 melakukan pengujian. Gunakan record dengan judul unik dan bersihkan hanya record
 uji yang dibuat sendiri.
 
-## 8. Aset dan Tampilan
+## 9. Aset dan Tampilan
 
 Semua gambar berada di `frontend/src/assets/image/`:
 
@@ -183,6 +266,32 @@ Semua gambar berada di `frontend/src/assets/image/`:
 Chevron submenu dibuat dengan CSS melalui `AnimatedChevron.jsx`; tidak memakai
 Lottie atau dependency animasi. Tambahkan item ke array `submenu` di `Header.jsx`
 agar chevron dan dropdown muncul otomatis.
+
+Footer memakai `lucide-react` untuk ikon alamat, telepon, dan email, serta
+`react-icons/fa6` untuk YouTube, Facebook, Instagram, dan TikTok. Jangan
+mengganti ikon SVG ini dengan GIF. Animasi hanya aktif saat hover/focus:
+ikon kontak naik sedikit, sedangkan ikon media sosial naik dan membesar ringan.
+`prefers-reduced-motion: reduce` mematikan transform animasi tersebut.
+
+Indikator aktif navbar memakai kelas `.is-active` pada link atau trigger menu.
+Garis kuning `var(--yellow)` dibuat dengan pseudo-element `::after`, menggunakan
+`transform: scaleX()` dan transition 240ms; garis tampil untuk menu aktif dan
+juga muncul halus saat hover atau fokus keyboard pada menu lain. Status aktif
+ditentukan `Header.jsx` dari `window.location.pathname` dan hash: Beranda untuk
+`/` atau `#beranda`, Inovasi untuk `#inovasi`, Lomba untuk `#lomba`, dan Riset
+untuk seluruh route `/riset/...`. Jangan gunakan selektor `li:first-child`
+untuk indikator aktif, karena akan membuat Beranda selalu aktif.
+
+`NewsSection.jsx` memakai carousel pratinjau tanpa dependency tambahan. Semua
+item `newsItems` dirender dan diberi kelas posisi `is-previous`, `is-active`,
+`is-next`, atau `is-hidden` berdasarkan `activeIndex`. Pada desktop, kartu aktif
+berada di tengah dan kartu sebelum/berikutnya terlihat sebagian dengan opacity
+lebih rendah; perpindahan memakai transform CSS. Pada layar maksimal 960px,
+pratinjau samping disembunyikan dan hanya kartu aktif yang ditampilkan agar
+ukuran konten tetap nyaman. Link di kartu yang bukan aktif tidak dapat difokuskan.
+Tombol slider memakai `.slider-chevron` CSS, bukan karakter teks; hover/focus
+memberi perpindahan kecil sesuai arah chevron dan latar tombol kuning. Aturan
+`prefers-reduced-motion` menonaktifkan transform tombol dan chevron tersebut.
 
 ### Submenu berbasis klik
 
@@ -208,8 +317,8 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
 `App.css`:
 
 - `.nav-trigger` dipasangkan ke selektor `.main-nav li > a` agar tampil identik
-  dengan link menu lain; state aktif memakai `[aria-expanded='true']`, bukan
-  `:hover` saja.
+  dengan link menu lain. Warna trigger berubah saat `[aria-expanded='true']`,
+  sedangkan garis aktif ditentukan kelas `.is-active`.
 - Animasi bob ada di wrapper `.chevron-icon` (`translateY(±1.5px)`), rotasi ada
   di `.chevron-icon::before`. Pemisahan ini wajib dipertahankan karena bob dan
   rotasi sama-sama memakai `transform`; jika digabung pada satu elemen, salah
@@ -226,7 +335,7 @@ build diuji di Chrome headless (CDP) untuk hover/focus tidak membuka, klik
 buka/tutup, rotasi chevron, serta alur mobile. Skrip uji tersebut sementara dan
 sudah dihapus, bukan bagian repo.
 
-## 9. Menjalankan Lokal
+## 10. Menjalankan Lokal
 
 Prasyarat: PHP 8.3+, Composer, MySQL, dan Node.js 22.13+.
 
@@ -262,7 +371,7 @@ Pada komputer development saat ini, Node/NPM tersedia di
 `C:\nvm4w\nodejs`. Jika `npm` tidak ditemukan dari terminal, tambahkan folder
 tersebut ke `PATH` atau jalankan `C:\nvm4w\nodejs\npm.cmd`.
 
-## 10. Verifikasi Sebelum Selesai
+## 11. Verifikasi Sebelum Selesai
 
 Frontend:
 
@@ -279,22 +388,61 @@ php artisan test
 php artisan route:list --path=api
 ```
 
+`phpunit.xml` memaksa `DB_CONNECTION=sqlite` dan `DB_DATABASE=:memory:`, jadi
+test tidak pernah menyentuh MySQL `Rumah_brida`. Karena itu ekstensi PHP
+`pdo_sqlite` dan `sqlite3` harus aktif di `php.ini`; tanpa itu `php artisan test`
+gagal dengan "could not find driver".
+
+Feature test yang tersedia: `tests/Feature/AuthApiTest.php` dan
+`tests/Feature/ResearchProposalApiTest.php`. Dua test di file proposal sengaja
+memakai header `Authorization: Bearer` asli, bukan `Sanctum::actingAs`, karena
+`actingAs` menyetel user pada guard default sehingga bug guard tidak terdeteksi.
+Jangan mengganti keduanya menjadi `actingAs`.
+
 Perubahan proposal harus diuji minimal untuk create, validation error, read,
 update tanpa mengganti PDF, dan delete beserta file PDF.
 
-## 11. Batasan dan Prioritas Lanjutan
+## 12. Batasan dan Prioritas Lanjutan
 
-1. **Autentikasi belum ada.** Saat ini endpoint edit/hapus terbuka. Sebelum
-   production, tambahkan login, ownership proposal, role peneliti/admin, dan
-   authorization policy Laravel.
-2. Buat halaman daftar/edit draft milik pengguna.
-3. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
-4. Bangun submenu serta halaman Inovasi dan Lomba.
-5. Bangun formulir dan alur menu Lapor.
-6. Tambahkan feature test khusus API proposal; test yang tersedia masih dasar.
-7. Optimalkan gambar JPEG besar untuk performa production.
+Autentikasi, otorisasi, dan rate limiting sudah selesai dan sudah masuk ke
+branch `main`. Sisa prioritas, diurutkan dari yang paling murah dan paling
+mendesak:
 
-## 12. Aturan Kerja Agent
+1. Buat halaman daftar/edit draft milik pengguna (`Draft Saya`). Backend sudah
+   mendukung lewat `GET /api/research-proposals?status=all`, jadi sisa
+   pekerjaannya hanya di frontend.
+2. Batasi akses file PDF. Saat ini file di public storage bisa diakses siapa pun
+   yang punya URL walau proposalnya masih draft. Ini lubang privasi yang masih
+   terbuka.
+3. Tambahkan pagination pada `GET /api/research-proposals` dan hentikan
+   pengiriman seluruh isi BAB I-III pada respons daftar.
+4. Tambahkan role peneliti/admin dan alur verifikasi proposal.
+5. Pindahkan berita statis dari `src/data/news.js` ke database dan API admin.
+6. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
+   Inovasi/Lomba di `Header.jsx` yang belum memakai garis miring di depan,
+   sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
+   yang sedang dibuka.
+7. Bangun formulir dan alur menu Lapor.
+8. Optimalkan gambar besar untuk performa production; `berita 2.jpeg` dan
+   `logo_rumah brida.png` masih di atas 500 kB.
+9. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
+
+## 13. Alur Kerja Git
+
+Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
+
+- Jangan commit langsung ke `main`. Buat branch fitur seperti
+  `feat/nama-fitur`, lalu push dengan `git push -u origin <branch>`.
+- Selesaikan verifikasi bagian 11 sebelum merge.
+- Merge memakai `git merge --no-ff <branch>` agar riwayat satu fitur tetap
+  terbaca sebagai satu kelompok.
+- `gh` (GitHub CLI) belum terpasang di komputer development ini, jadi merge
+  dijalankan lewat git biasa atau lewat halaman pull request GitHub.
+- `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
+- Branch `feat/api-auth-rate-limit` berisi Sanctum, policy proposal, rate
+  limiting, dan halaman `/masuk`; sudah di-merge ke `main`.
+
+## 14. Aturan Kerja Agent
 
 - Pertahankan desain navy, putih, dan aksen kuning yang sudah digunakan.
 - Gunakan komponen dan pola yang sudah ada sebelum menambah dependency baru.

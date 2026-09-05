@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ResearchProposal;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -14,9 +15,22 @@ class ResearchProposalController extends Controller
     public function index(Request $request): JsonResponse
     {
         $status = $request->query('status', 'submitted');
+        $user = $request->user();
+
+        // Draft hanya boleh terlihat oleh pemiliknya sendiri.
+        if ($status !== 'submitted' && ! $user) {
+            $status = 'submitted';
+        }
 
         $proposals = ResearchProposal::query()
             ->when($status !== 'all', fn ($query) => $query->where('status', $status))
+            ->when(
+                $status !== 'submitted' && $user,
+                fn ($query) => $query->where(function ($inner) use ($user) {
+                    $inner->where('status', 'submitted')
+                        ->orWhere('user_id', $user->id);
+                }),
+            )
             ->latest('submitted_at')
             ->latest('created_at')
             ->get()
@@ -35,6 +49,7 @@ class ResearchProposalController extends Controller
             : null;
 
         $proposal = ResearchProposal::create([
+            'user_id' => $request->user()->id,
             'researcher_name' => $validated['researcher_name'] ?? null,
             'proposal_title' => $validated['proposal_title'] ?? null,
             'institution' => $validated['institution'] ?? null,
@@ -56,26 +71,33 @@ class ResearchProposalController extends Controller
 
     public function show(ResearchProposal $researchProposal): JsonResponse
     {
+        Gate::authorize('view', $researchProposal);
+
         return response()->json(['data' => $this->serialize($researchProposal)]);
     }
 
     public function update(Request $request, ResearchProposal $researchProposal): JsonResponse
     {
+        Gate::authorize('update', $researchProposal);
+
         $isSubmit = $request->input('action', $researchProposal->status) !== 'draft';
         $validated = $this->validatePayload($request, $isSubmit, false);
         $oldPdfPath = $researchProposal->pdf_path;
 
-        $data = [
-            'researcher_name' => $validated['researcher_name'] ?? null,
-            'proposal_title' => $validated['proposal_title'] ?? null,
-            'institution' => $validated['institution'] ?? null,
-            'research_coordinates' => $validated['research_coordinates'] ?? null,
-            'chapter_one' => $validated['chapter_one'] ?? null,
-            'chapter_two' => $validated['chapter_two'] ?? null,
-            'chapter_three' => $validated['chapter_three'] ?? null,
-            'status' => $isSubmit ? 'submitted' : 'draft',
-            'submitted_at' => $isSubmit ? ($researchProposal->submitted_at ?? now()) : null,
-        ];
+        // Hanya kolom yang benar-benar dikirim yang ditulis, supaya update
+        // sebagian (mis. simpan draft) tidak mengosongkan data yang sudah ada.
+        $data = array_intersect_key($validated, array_flip([
+            'researcher_name',
+            'proposal_title',
+            'institution',
+            'research_coordinates',
+            'chapter_one',
+            'chapter_two',
+            'chapter_three',
+        ]));
+
+        $data['status'] = $isSubmit ? 'submitted' : 'draft';
+        $data['submitted_at'] = $isSubmit ? ($researchProposal->submitted_at ?? now()) : null;
 
         if ($request->hasFile('pdf')) {
             $data['pdf_path'] = $request->file('pdf')->store('research-proposals', 'public');
@@ -96,6 +118,8 @@ class ResearchProposalController extends Controller
 
     public function destroy(ResearchProposal $researchProposal): JsonResponse
     {
+        Gate::authorize('delete', $researchProposal);
+
         if ($researchProposal->pdf_path) {
             Storage::disk('public')->delete($researchProposal->pdf_path);
         }
@@ -170,6 +194,7 @@ class ResearchProposalController extends Controller
             'pdf_url' => $proposal->pdf_path
                 ? url(Storage::disk('public')->url($proposal->pdf_path))
                 : null,
+            'can_manage' => Gate::allows('update', $proposal),
         ];
     }
 }

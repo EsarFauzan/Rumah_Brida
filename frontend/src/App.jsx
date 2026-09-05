@@ -3,6 +3,7 @@ import Header from './components/Header'
 import HeroSection from './components/HeroSection'
 import NewsSection from './components/NewsSection'
 import NewsDetailPage from './pages/NewsDetailPage'
+import LoginPage from './pages/LoginPage'
 import ResearchProposalPage from './pages/ResearchProposalPage'
 import ResearchResultsPage from './pages/ResearchResultsPage'
 import ResearchProposalDetailPage from './pages/ResearchProposalDetailPage'
@@ -23,6 +24,10 @@ function App() {
   }, [])
 
   const renderPage = () => {
+    if (pathname === '/masuk') {
+      return <LoginPage />
+    }
+
     if (pathname.startsWith('/berita/')) {
       return <NewsDetailPage pathname={pathname} />
     }
