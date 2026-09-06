@@ -165,6 +165,86 @@ class NewsApiTest extends TestCase
         $this->getJson('/api/admin/news')->assertOk()->assertJsonCount(2, 'data');
     }
 
+    public function test_admin_news_image_is_optimized_to_webp(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $image = $this->realJpeg(2400, 1500);
+        $originalSize = strlen($image->getContent());
+
+        $this->postJson('/api/admin/news', $this->payload(['image' => $image]))
+            ->assertCreated();
+
+        $path = News::sole()->image_path;
+        $this->assertNotNull($path);
+        $this->assertTrue(str_ends_with($path, '.webp'), 'Path bukan WebP: '.$path);
+        Storage::disk('public')->assertExists($path);
+
+        $stored = Storage::disk('public')->get($path);
+        $this->assertLessThan($originalSize, strlen($stored), 'Hasil WebP tidak lebih kecil dari asli');
+
+        $decoded = @imagecreatefromstring($stored);
+        $this->assertNotFalse($decoded, 'WebP tersimpan tidak dapat didekode');
+        $this->assertSame(1600, imagesx($decoded));
+        $this->assertSame(1000, imagesy($decoded));
+        imagedestroy($decoded);
+    }
+
+    public function test_admin_news_small_image_is_reencoded_without_resize(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->postJson('/api/admin/news', $this->payload(['image' => $this->realJpeg(800, 600)]))
+            ->assertCreated();
+
+        $path = News::sole()->image_path;
+        $this->assertNotNull($path);
+        Storage::disk('public')->assertExists($path);
+
+        $decoded = @imagecreatefromstring(Storage::disk('public')->get($path));
+        $this->assertNotFalse($decoded);
+        $this->assertSame(800, imagesx($decoded), 'Gambar di bawah 1600px tidak boleh diresize');
+        $this->assertSame(600, imagesy($decoded));
+        imagedestroy($decoded);
+    }
+
+    public function test_admin_news_unprocessable_image_stores_original(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->postJson('/api/admin/news', $this->payload(['image' => $this->fakeImage()]))
+            ->assertCreated();
+
+        $path = News::sole()->image_path;
+        $this->assertNotNull($path);
+        $this->assertFalse(str_ends_with($path, '.webp'));
+        Storage::disk('public')->assertExists($path);
+    }
+
+    /**
+     * JPEG asli yang dibuat lewat GD. Test yang memakainya dilewati bila
+     * ekstensi GD tidak tersedia di lingkungan yang menjalankan test.
+     */
+    private function realJpeg(int $width, int $height): UploadedFile
+    {
+        if (! function_exists('imagecreatetruecolor') || ! function_exists('imagejpeg')) {
+            $this->markTestSkipped('Ekstensi GD tidak tersedia.');
+        }
+
+        $img = imagecreatetruecolor($width, $height);
+        $bg = imagecolorallocate($img, 200, 180, 40);
+        imagefilledrectangle($img, 0, 0, $width, $height, $bg);
+        ob_start();
+        imagejpeg($img, null, 85);
+        $bytes = ob_get_clean();
+        imagedestroy($img);
+
+        return UploadedFile::fake()->createWithContent('berita-besar.jpg', $bytes);
+    }
+
     /**
      * @param  array<string, mixed>  $overrides
      * @return array<string, mixed>

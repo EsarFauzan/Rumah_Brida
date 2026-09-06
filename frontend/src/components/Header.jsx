@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, FileText, LayoutDashboard, Newspaper, LogOut } from 'lucide-react'
-import logoRumahBrida from '../assets/image/logo_fix.png'
+import logoRumahBrida from '../assets/image/logo-fix.webp'
 import AnimatedChevron from './AnimatedChevron'
 import useAuth from '../hooks/useAuth'
 import api from '../services/api'

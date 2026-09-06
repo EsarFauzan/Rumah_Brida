@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\News;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -89,7 +90,77 @@ class NewsController extends Controller
 
     private function storeImage(Request $request, string $field): ?string
     {
-        return $request->hasFile($field) ? $request->file($field)->store('news', 'public') : null;
+        if (! $request->hasFile($field)) {
+            return null;
+        }
+
+        $optimized = $this->optimizeImage($request->file($field));
+
+        return $optimized !== null
+            ? Storage::disk('public')->putFile('news', $optimized)
+            : $request->file($field)->store('news', 'public');
+    }
+
+    /**
+     * Optimalkan gambar berita: sisi panjang dibatasi 1600px dan
+     * dienkode ulang sebagai WebP (kualitas 82) bila hasilnya lebih kecil.
+     * Bila gambar tidak dapat diproses (termasuk SVG, GIF animasi, atau
+     * berkas rusak), berkas asli disimpan apa adanya.
+     */
+    private function optimizeImage(UploadedFile $file): ?UploadedFile
+    {
+        $processable = in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true);
+        if (! $processable) {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($file->getContent());
+        if ($source === false) {
+            return null;
+        }
+
+        $maxEdge = 1600;
+        $width = imagesx($source);
+        $height = imagesy($source);
+
+        imagepalettetotruecolor($source);
+        imagealphablending($source, false);
+        imagesavealpha($source, true);
+
+        if ($width > $maxEdge || $height > $maxEdge) {
+            $scale = $maxEdge / max($width, $height);
+            $resized = imagescale($source, (int) round($width * $scale), (int) round($height * $scale), IMG_BICUBIC);
+            if ($resized !== false) {
+                imagedestroy($source);
+                $source = $resized;
+                imagealphablending($source, false);
+                imagesavealpha($source, true);
+            }
+        }
+
+        $target = tempnam(sys_get_temp_dir(), 'news-');
+        if ($target === false) {
+            imagedestroy($source);
+
+            return null;
+        }
+        rename($target, $target .= '.webp');
+
+        if (! imagewebp($source, $target, 82)) {
+            imagedestroy($source);
+            @unlink($target);
+
+            return null;
+        }
+        imagedestroy($source);
+
+        if (filesize($target) >= $file->getSize()) {
+            @unlink($target);
+
+            return null;
+        }
+
+        return new UploadedFile($target, $file->getClientOriginalName(), 'image/webp', null, true);
     }
 
     private function serialize(News $news, bool $detail): array
