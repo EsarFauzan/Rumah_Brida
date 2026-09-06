@@ -688,7 +688,10 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
   masuk lewat pull request #1), `feat/dialog-hapus-berita` (dialog hapus
   berita in-app lewat `DeleteItemModal`/`DeleteNewsModal`), dan
   `feat/optimasi-gambar` (logo WebP dan optimasi upload gambar berita dengan
-  GD; dibuat bertumpuk di atas branch dialog, sehingga merge harus berurutan).
+  GD; dibuat bertumpuk di atas branch dialog, sehingga merge harus berurutan),
+  dan `feat/header-lapor-masuk` (`Lapor!` jadi item navigasi ber-href `/#lapor`
+  dan restyle tombol `Masuk`; diverifikasi di Chrome headless dengan 30 asersi
+  lulus).
   Riwayatnya
   tetap terbaca di `main` lewat merge commit masing-masing.
 
