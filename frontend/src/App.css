@@ -1,4 +1,5 @@
 :root {
+  --font-display: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter Variable', 'Segoe UI', Arial, sans-serif;
   --navy: #102a4e;
   --navy-deep: #071b35;
   --yellow: #f6c84b;
@@ -140,6 +141,8 @@ body {
   color: var(--text-primary);
   transition: background-color 240ms ease, color 240ms ease;
 }
+
+h1, h2, h3, .modal-target, button, .slider-dots button { font-family: var(--font-display); }
 
 .site-shell { min-height: 100vh; background: var(--bg); }
 .container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
@@ -387,7 +390,7 @@ body {
 .research-form-card label { position: relative; display: flex; flex-direction: column; gap: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 700; }
 .research-form-card input, .research-form-card select, .research-form-card textarea {
   width: 100%; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border-input); border-radius: 0;
-  font-size: 13px; font-weight: 400; outline: 0; transition: border-color 150ms ease, box-shadow 150ms ease;
+  font-size: 13px; font-weight: 400; outline: 0; font-family: var(--font-display); transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 .research-form-card input, .research-form-card select { height: 42px; padding: 0 12px; }
 .research-form-card textarea { min-height: 126px; padding: 12px; line-height: 1.55; resize: vertical; }
@@ -491,11 +494,11 @@ body {
 .admin-filter { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 24px; }
 .admin-filter button { min-height: 34px; padding: 0 12px; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 4px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .admin-filter button:hover, .admin-filter button:focus-visible, .admin-filter button.is-active { color: var(--navy-deep); border-color: var(--yellow); background: var(--amber-tint); outline: none; }
-.admin-result-item textarea { width: 100%; min-height: 70px; margin-top: 13px; padding: 10px; color: var(--text-secondary); border: 1px solid var(--border-input); border-radius: 4px; font: inherit; font-size: 12px; line-height: 1.5; resize: vertical; }
+.admin-result-item textarea { width: 100%; min-height: 70px; margin-top: 13px; padding: 10px; color: var(--text-secondary); border: 1px solid var(--border-input); border-radius: 4px; font: inherit; font-family: var(--font-display); font-size: 12px; line-height: 1.5; resize: vertical; }
 .admin-result-item textarea:focus { border-color: var(--yellow); outline: 2px solid rgba(245, 190, 45, .22); }
 .review-note { margin: 12px 0 0 !important; color: var(--text-secondary); font-size: 12px !important; }
 .admin-news-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 28px; padding: 24px; background: var(--surface); border: 1px solid var(--border-strong); border-radius: 6px; }
-.admin-news-form input, .admin-news-form textarea, .admin-news-form select { width: 100%; min-height: 40px; padding: 9px 11px; color: var(--text-secondary); border: 1px solid var(--border-input); border-radius: 4px; font: inherit; font-size: 13px; }
+.admin-news-form input, .admin-news-form textarea, .admin-news-form select { width: 100%; min-height: 40px; padding: 9px 11px; color: var(--text-secondary); border: 1px solid var(--border-input); border-radius: 4px; font: inherit; font-family: var(--font-display); font-size: 13px; }
 .admin-news-form textarea { min-height: 92px; resize: vertical; }
 .admin-news-form textarea[name='content'] { grid-column: 1 / -1; min-height: 190px; }
 .admin-news-form label { color: var(--text-secondary); font-size: 12px; font-weight: 700; }
