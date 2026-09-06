@@ -674,7 +674,11 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
   privat dan URL bertanda tangan), `feat/draft-saya` (halaman Draft Saya,
   pagination, dashboard verifikasi admin, dan `DeleteProposalModal`), dan
   `feat/news-admin-api` (berita berbasis database dan kelola berita admin,
-  masuk lewat pull request #1). Riwayatnya
+  masuk lewat pull request #1), `feat/dialog-hapus-berita` (dialog hapus
+  berita in-app lewat `DeleteItemModal`/`DeleteNewsModal`), dan
+  `feat/optimasi-gambar` (logo WebP dan optimasi upload gambar berita dengan
+  GD; dibuat bertumpuk di atas branch dialog, sehingga merge harus berurutan).
+  Riwayatnya
   tetap terbaca di `main` lewat merge commit masing-masing.
 
 ## 14. Aturan Kerja Agent
