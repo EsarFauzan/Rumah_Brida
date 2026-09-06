@@ -200,6 +200,17 @@ Sisi frontend:
   `.account-menu`, `.account-menu-link`, `.account-menu-logout`,
   `.primary-form-link`.
 
+Saat belum masuk, `.account-button` pada header memakai ikon `UserRound` dari
+`lucide-react` diikuti teks `Masuk`. Tombol memakai `#0b2347`, tinggi 36px,
+radius 10px, padding horizontal 12px, font 14px/600, gap 7px, ikon 16px, tanpa
+shadow. Divider tipis sebelum area akun berjarak 16px dari tombol; fokus
+keyboard tetap memakai outline kuning. Jangan mengubah link `/masuk` atau logic
+`closeAll()`.
+
+`Lapor!` adalah item navigasi setelah `Lomba`, bukan tombol terpisah. Gunakan
+href `/#lapor` agar hash selalu kembali ke Beranda dari route lain; indikator
+aktifnya mengikuti item navigasi lain lewat `getActiveMenu()`.
+
 Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
 Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
 `throttleApi()` di `bootstrap/app.php` akan melempar exception.
