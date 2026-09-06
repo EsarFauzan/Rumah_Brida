@@ -49,7 +49,9 @@ frontend/
   src/App.css                         Styling seluruh halaman
   src/components/Header.jsx           Navbar, submenu, dan status akun
   src/components/Pagination.jsx       Kontrol halaman daftar proposal
-  src/components/DeleteProposalModal.jsx Dialog konfirmasi hapus proposal
+  src/components/DeleteItemModal.jsx  Dialog hapus generik (fokus trap, scroll lock)
+  src/components/DeleteProposalModal.jsx Dialog hapus proposal (wrapper DeleteItemModal)
+  src/components/DeleteNewsModal.jsx  Dialog hapus berita (wrapper DeleteItemModal)
   src/components/Footer.jsx           Footer global
   src/components/HeroSection.jsx      Hero beranda
   src/components/NewsSection.jsx      Slider berita beranda
@@ -335,6 +337,12 @@ Isi berita dirender sebagai teks biasa di React, bukan `dangerouslySetInnerHTML`
 Jangan mengubahnya menjadi HTML mentah tanpa sanitasi, karena kolom `content`
 diisi lewat form admin dan akan menjadi celah XSS.
 
+Hapus berita dari `/admin/berita` memakai dialog in-app `DeleteNewsModal`
+(wrapper `DeleteItemModal`), bukan `window.confirm()`. Tombol `Hapus` membuka
+dialog yang menampilkan judul berita, dan DELETE dikirim setelah tombol
+`Hapus Berita` ditekan. Halaman memakai guard `if (deletingId !== null) return`
+agar klik ganda tidak mengirim DELETE dua kali.
+
 ## 8. Database
 
 Tabel utama: `research_proposals`.
@@ -479,13 +487,19 @@ build diuji di Chrome headless (CDP) untuk hover/focus tidak membuka, klik
 buka/tutup, rotasi chevron, serta alur mobile. Skrip uji tersebut sementara dan
 sudah dihapus, bukan bagian repo.
 
-### Dialog konfirmasi hapus proposal
+### Dialog konfirmasi hapus
 
-`DeleteProposalModal.jsx` adalah satu-satunya dialog konfirmasi hapus proposal
-dan dipakai bersama oleh `ResearchResultsPage.jsx`, `ResearchDraftsPage.jsx`,
-serta `ResearchProposalDetailPage.jsx`. Props: `open`, `proposalTitle`,
-`isDeleting`, `onCancel`, dan `onConfirm`. Judul proposal wajib dinamis; jika
-kosong, komponen menampilkan `proposal tanpa judul`.
+Logika dialog (fokus trap, scroll lock, klik overlay, Escape) tinggal di
+`DeleteItemModal.jsx` yang generik. `DeleteProposalModal.jsx` dan
+`DeleteNewsModal.jsx` hanyalah wrapper berisi teks: keduanya meneruskan props
+`open`, `isDeleting`, `onCancel`, dan `onConfirm`, judul item yang akan tampil
+dinamis, serta `labelIds` untuk id aria. Untuk kebutuhan hapus baru, buat
+wrapper lain di atas `DeleteItemModal`; jangan menyalin ulang logika dialog.
+
+`DeleteProposalModal` tetap dipakai bersama oleh `ResearchResultsPage.jsx`,
+`ResearchDraftsPage.jsx`, dan `ResearchProposalDetailPage.jsx`; judul proposal
+wajib dinamis dan jika kosong tampil `proposal tanpa judul`.
+`DeleteNewsModal` dipakai `AdminNewsPage.jsx` untuk hapus berita.
 
 Perilaku yang harus dipertahankan:
 
@@ -501,7 +515,8 @@ Perilaku yang harus dipertahankan:
   `.modal-spinner` dan teks `Menghapus...`, serta Escape dan klik overlay
   diabaikan supaya proses hapus tidak terputus.
 - Halaman pemanggil memakai guard `if (deletingId !== null) return` (detail:
-  `if (isDeleting) return`) supaya klik ganda tidak mengirim DELETE dua kali.
+  `if (isDeleting) return`, AdminNewsPage: pola yang sama) supaya klik ganda
+  tidak mengirim DELETE dua kali.
 
 Kelas CSS di `App.css`: `.modal-overlay`, `.modal-card`, `.modal-close`,
 `.modal-icon`, `.modal-title`, `.modal-description`, `.modal-target`,
@@ -514,12 +529,20 @@ melebar penuh, sehingga `Hapus Proposal` berada di atas `Batal`.
 `prefers-reduced-motion: reduce` mematikan animasi overlay/kartu dan
 memperlambat spinner.
 
-Verifikasi terakhir dialog ini: `npm run lint` bersih, `npm run build` sukses,
-dan alur diuji langsung di browser memakai akun uji sementara untuk buka/tutup
-via empat cara, focus trap, scroll lock, pengembalian fokus, state `isDeleting`
-(DELETE diperlambat lewat intersepsi request), dua penghapusan nyata dari Draft
-Saya dan Hasil Riset, satu penghapusan dari halaman detail yang mengarahkan ke
-`/riset/hasil`, serta tata letak 390px. Akun dan proposal uji sudah dihapus.
+Verifikasi dialog berita setelah pemisahan komponen: `npm run lint` bersih,
+`npm run build` sukses, dan alur diuji langsung di Chrome headless (CDP) dengan
+39 asersi lulus: buka/tutup via empat cara (Hapus lalu Escape, Hapus lalu X,
+Hapus lalu klik overlay, klik di dalam kartu tidak menutup), focus trap,
+scroll lock, pengembalian fokus, state `isDeleting` (DELETE diperlambat lewat
+intersepsi Fetch; Escape dan overlay diabaikan), dua penghapusan nyata lewat
+dialog, serta tata letak 390px (column-reverse, tombol melebar penuh, tanpa
+overflow horizontal). Verifikasi dialog proposal sebelumnya: alur serupa diuji
+dari Draft Saya, Hasil Riset, dan halaman detail yang mengarahkan ke
+`/riset/hasil`. Catatan untuk pengujian browser serupa: tunggu animasi
+`modal-pop` selesai (`getAnimations().forEach((a) => a.finish())`) sebelum
+mengukur geometri kartu, dan target tombol `Hapus` berdasarkan judul baris uji,
+bukan indeks daftar. Akun dan berita uji sudah dihapus; baris asli hasil
+seeder diverifikasi utuh. Skrip uji sementara sudah dihapus, bukan bagian repo.
 
 ## 10. Menjalankan Lokal
 
