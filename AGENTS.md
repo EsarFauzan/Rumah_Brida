@@ -601,7 +601,12 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
   blur 18px saturate 145%, radius 30px, width min(82vw, 1200px),
   translateY(8px), shadow lembut) TANPA meninggalkan `position: sticky` — slot
   header tetap di alur dokumen sehingga tidak ada layout shift, tinggi tetap
-  76px, logo menyusut ke 48px. Latar glass memakai `--surface` sehingga di
+  76px, logo menyusut ke 48px. Kekentalan glass adalah 55% dengan blur 22px
+  (pilihan eksplisit pemilik; sebelumnya 68%/18px). Kontras teks nav di atas
+  konten terang terukur 10.46:1; saat melayang di atas hero gelap beranda
+  estimasi turun di bawah 4.5:1 sesaat, jadi jika keterbacaan terasa kurang,
+  naikkan ke 65% sebelum menambah override warna. Latar glass memakai
+  `--surface` sehingga di
   dark mode otomatis menjadi kaca gelap; tinta nav TIDAK dioverride (warna
   standar header sudah terbaca di atas glass) — jangan menambahkan warna navy
   solid atau token tinta tergulir seperti versi sebelumnya. Panel submenu
@@ -640,11 +645,11 @@ konten diberi ruang atas, sedangkan
 `prefers-reduced-motion` juga memendekkan transisi header.
 
 Verifikasi terakhir navbar glass semua halaman: `npm run lint` bersih, `npm run
-build` sukses, dan 12 asersi CDP lulus (glass 68% + blur di beranda, subhalaman,
-dark otomatis kaca gelap dari `--surface`, tinta nav standar tanpa override,
-tanpa layout shift, reduced-motion 1ms, mobile 390px: glass 24px, hamburger
-navy, panel menu standar, tanpa overflow horizontal). Skrip uji tersebut
-sementara dan sudah dihapus, bukan bagian repo.
+build` sukses, dan 7 asersi CDP lulus pada konfigurasi glass 55%/blur 22px
+(glass di beranda, subhalaman, dark otomatis kaca gelap dari `--surface`,
+tanpa layout shift, reduced-motion 1ms, mobile 390px: glass 24px, tanpa
+overflow horizontal). Skrip uji tersebut sementara dan sudah dihapus, bukan
+bagian repo.
 
 ### Dialog konfirmasi hapus
 
