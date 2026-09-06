@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, FileText, LayoutDashboard, Newspaper, LogOut } from 'lucide-react'
+import { ChevronDown, FileText, LayoutDashboard, LogOut, Newspaper, UserRound } from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo-fix.webp'
 import AnimatedChevron from './AnimatedChevron'
 import useAuth from '../hooks/useAuth'
@@ -18,6 +18,7 @@ const menuItems = [
   },
   { label: 'Inovasi', href: '#inovasi', submenu: [] },
   { label: 'Lomba', href: '#lomba', submenu: [] },
+  { label: 'Lapor!', href: '/#lapor' },
 ]
 
 const submenuId = (label) => `submenu-${label.toLowerCase().replace(/\s+/g, '-')}`
@@ -48,6 +49,10 @@ const getActiveMenu = () => {
 
     if (hash === '#lomba') {
       return 'Lomba'
+    }
+
+    if (hash === '#lapor') {
+      return 'Lapor!'
     }
 
     return 'Beranda'
@@ -223,8 +228,6 @@ function Header() {
           </ul>
         </nav>
 
-        <a className="report-button" href="#lapor">Lapor</a>
-
         <div className={`header-account${isAccountMenuOpen ? ' is-open' : ''}`} ref={accountRef}>
           {isAuthenticated ? (
             <>
@@ -270,7 +273,10 @@ function Header() {
               </div>
             </>
           ) : (
-            <a className="account-button" href="/masuk" onClick={closeAll}>Masuk</a>
+            <a className="account-button" href="/masuk" onClick={closeAll}>
+              <UserRound size={16} strokeWidth={1.9} aria-hidden="true" />
+              <span>Masuk</span>
+            </a>
           )}
         </div>
       </div>

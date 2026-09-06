@@ -97,12 +97,11 @@
 .submenu a:hover { color: var(--navy); background: #f2f5f8; }
 .submenu span { display: block; padding: 7px; }
 .has-submenu.is-open > .submenu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
-.report-button, .primary-button {
+.primary-button {
   display: inline-flex; align-items: center; justify-content: center; text-decoration: none;
   font-weight: 700; background: var(--yellow); color: #202b3c;
 }
-.report-button { min-width: 76px; height: 38px; border-radius: 4px; font-size: 13px; }
-.report-button:hover, .primary-button:hover { background: #e9b934; }
+.primary-button:hover { background: #e9b934; }
 .menu-toggle { display: none; }
 
 .hero-section {
@@ -264,9 +263,12 @@
 .auth-tabs button.is-active { color: #fff; background: var(--navy); }
 .auth-tabs button:focus-visible { outline: 2px solid var(--yellow); outline-offset: -3px; }
 .auth-required { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0 4px; color: var(--muted); font-size: 14px; text-align: center; }
-.header-account { position: relative; display: inline-flex; align-items: center; margin-left: 14px; }
-.account-button { min-height: 38px; display: inline-flex; align-items: center; padding: 0 14px; color: var(--navy-deep); background: #fff; border: 1px solid #c7cfda; border-radius: 4px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer; transition: color 150ms ease, border-color 150ms ease; }
-.account-button:hover { color: var(--navy); border-color: var(--navy); }
+.header-account { position: relative; display: inline-flex; align-items: center; margin-left: 16px; padding-left: 16px; }
+.header-account::before { content: ''; position: absolute; left: 0; width: 1px; height: 27px; background: #e3e8ee; }
+.account-button { height: 36px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; color: #fff; background: #0b2347; border: 1px solid #0b2347; border-radius: 10px; box-shadow: none; font-size: 14px; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; transition: background-color 200ms ease; }
+.account-button:hover { background: #14345f; }
+.account-button:focus-visible { outline: 2px solid var(--yellow); outline-offset: 4px; }
+.account-button svg { flex: 0 0 auto; color: #fff; }
 .account-button:disabled { cursor: wait; opacity: .62; }
 .profile-button { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; padding: 0; color: var(--navy); background: #fff; border: 1px solid #d6dde7; border-radius: 50%; box-shadow: 0 4px 12px rgba(16,42,78,.07); cursor: pointer; transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease; }
 .profile-button:hover, .profile-button:focus-visible, .header-account.is-open .profile-button { border-color: var(--yellow); box-shadow: 0 6px 16px rgba(16,42,78,.13); transform: translateY(-1px); }
@@ -440,9 +442,10 @@
   .has-submenu.is-open > .submenu { display: block; opacity: 1; visibility: visible; transform: none; }
   .submenu a { padding: 9px 12px; border-left: 2px solid #dbe1e8; }
   .submenu span { display: none; }
-  .report-button { min-width: 62px; height: 34px; margin-left: 8px; }
-  .header-account { margin-left: 8px; }
-  .account-button { min-height: 34px; padding: 0 10px; font-size: 12px; }
+  .header-account { margin-left: 10px; padding-left: 10px; }
+  .header-account::before { height: 23px; }
+  .account-button { height: 34px; gap: 6px; padding: 0 10px; border-radius: 9px; font-size: 13px; }
+  .account-button svg { width: 15px; height: 15px; }
   .profile-button { width: 38px; height: 38px; }
   .account-avatar { width: 30px; height: 30px; font-size: 11px; }
   .account-chevron { right: -6px; bottom: -3px; }
