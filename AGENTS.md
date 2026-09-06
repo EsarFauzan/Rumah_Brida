@@ -242,11 +242,16 @@ Arsitektur tema:
 - Warna semantik (label kicker amber, status proposal, feedback form sukses/
   error, kotak peringatan, tombol logout/hapus, dsb.) memakai token khusus
   `--accent-amber*`, `--status-green`, `--success*`, `--danger*`, `--info*`,
-  `--logout*`, `--amber-*`, `--text-soft`. Nilai dark-nya BUKAN warna light
-  yang dipertahankan: teks dicerahkan (amber `#f0c05a`, hijau `#63d6a0`, merah
-  `#ff8f84`) dan latar kotak di-tint gelap transparan agar kontras tetap >= 4.5.
-  Aturan ini lahir dari laporan teks tidak terbaca saat mode gelap; jangan
-  memakai warna status light langsung di CSS baru, tokenisasi dulu.
+  `--logout*`, `--amber-*`, `--text-soft`, ditambah token footer
+  `--footer-bg/--footer-text/--footer-link/--footer-social/--footer-muted` dan
+  heading form `--form-heading`. Footer TIDAK memakai `var(--navy)` sebagai
+  latar karena token itu berperan terang di dark; latar footer punya token
+  sendiri (light `#102a4e` persis desain lama, dark `#0d1729`). Nilai dark
+  token di atas BUKAN warna light yang dipertahankan: teks dicerahkan
+  (amber `#f0c05a`, hijau `#63d6a0`, merah `#ff8f84`) dan latar kotak di-tint
+  gelap transparan agar kontras tetap >= 4.5. Aturan ini lahir dari laporan
+  teks tidak terbaca saat mode gelap; jangan memakai warna status light
+  langsung di CSS baru, tokenisasi dulu.
 - Pergantian tema berlangsung INSTAN tanpa animasi halaman — efek ripple
   View Transition sempat dibangun lalu dihapus atas keputusan pemilik. Yang
   beranimasi hanya cross-fade ikon Sun/Moon (rotate ±90deg + scale, 300ms).
@@ -259,6 +264,14 @@ mobile 390px, reduced-motion). Keterbacaan dark mode diaudit CDP dengan rasio
 kontras WCAG >= 4.5 pada beranda, hasil riset, form masuk, dan state kosong
 draft — 11 asersi lulus termasuk nilai token semantik dark. Skrip uji
 sementara sudah dihapus.
+
+Audit kontras dark mode terbaru (usai fitur tipografi): 32 asersi CDP lulus
+(dark 29 + light 3). Audit menemukan dan memperbaiki dua pelanggaran WCAG di
+dark: footer bertumpuk `var(--navy)` terang dengan teks terang (1.18-1.69:1)
+kini berlatar `--footer-bg` `#0d1729` (5.62-11.66:1), dan heading form
+hardcoded `#111827` (1.04:1) kini memakai `--form-heading` `#dbe7f6` di dark
+(13.63:1). Nilai light kedua token dipertahankan byte-per-byte. Kartu berita
+dikecualikan dari audit statis karena butuh API backend.
 
 Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
 Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
