@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, FileText, LayoutDashboard, LogOut, Newspaper, UserRound } from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo-fix.webp'
 import AnimatedChevron from './AnimatedChevron'
+import ThemeToggle from './ThemeToggle'
 import useAuth from '../hooks/useAuth'
 import api from '../services/api'
 import { clearSession } from '../services/authStore'
@@ -229,6 +230,7 @@ function Header() {
         </nav>
 
         <div className={`header-account${isAccountMenuOpen ? ' is-open' : ''}`} ref={accountRef}>
+          <ThemeToggle />
           {isAuthenticated ? (
             <>
               <button
