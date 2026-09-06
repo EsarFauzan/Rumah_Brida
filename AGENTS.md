@@ -784,10 +784,11 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
 - `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
 - Branch fitur dihapus setelah merge, di lokal dengan `git branch -d` dan di
   remote dengan `git push origin --delete <branch>`; jangan pakai `-D`.
-- Saat ini ada dua branch fitur aktif: `feat/floating-hero-navbar` (navbar
-  beranda mengambang saat scroll) dan `feat/typografi` (font self-host, dibuat
-  bertumpuk di atas branch navbar sehingga merge harus berurutan). Branch fitur
-  yang sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
+- Saat ini hanya `main` yang tersisa di lokal dan remote. Branch fitur
+  `feat/floating-hero-navbar` (navbar beranda mengambang saat scroll) dan
+  `feat/typografi` (font self-host, dibuat bertumpuk di atas branch navbar
+  sehingga di-merge berurutan setelahnya) sudah di-merge ke main dan dihapus.
+  Branch fitur lain yang juga sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
   proposal, rate limiting, halaman `/masuk`), `feat/pdf-akses-privat` (storage
   privat dan URL bertanda tangan), `feat/draft-saya` (halaman Draft Saya,
   pagination, dashboard verifikasi admin, dan `DeleteProposalModal`), dan
