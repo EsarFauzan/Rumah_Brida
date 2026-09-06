@@ -1,4 +1,4 @@
-import logoRumahBrida from '../assets/image/logo_rumah brida.png'
+import logoRumahBrida from '../assets/image/logo-rumah-brida.webp'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import { FaFacebookF, FaInstagram, FaTiktok, FaYoutube } from 'react-icons/fa6'
 

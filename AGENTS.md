@@ -313,6 +313,15 @@ Gambar berita disimpan pada disk `public` di `storage/app/public/news`; jalankan
 `php artisan storage:link` untuk menampilkannya. Seeder `NewsSeeder` memindahkan
 tiga data berita awal tanpa gambar; unggah gambar melalui `/admin/berita`.
 
+Gambar yang diunggah dioptimalkan di `NewsController::optimizeImage()` memakai
+GD: sisi terpanjang dibatasi 1600px (bicubic) lalu dienkode ulang sebagai WebP
+kualitas 82. Hasil hanya dipakai bila lebih kecil dari asli; jika gambar tidak
+dapat diproses (mis. berkas palsu di test, SVG, GIF animasi), asli disimpan apa
+adanya sehingga endpoint tidak pernah gagal karena optimasi. Validasi tetap
+`image|max:5120` sebelum optimasi. Gambar lama sebelum fitur ini tidak diproses
+ulang. Batasan: rotasi EXIF foto ponsel belum ditangani (ekstensi `exif` tidak
+aktif); aktifkan bila orientasi miring menjadi masalah.
+
 Perilaku yang harus dipertahankan:
 
 - `index` hanya mengembalikan `status = published`, diurutkan `latest('published_at')`,
@@ -400,11 +409,13 @@ uji yang dibuat sendiri.
 Semua gambar berada di `frontend/src/assets/image/`:
 
 - `Background.jpeg`: hero dan dekorasi beranda.
-- `logo_fix.png`: logo navbar.
-- `logo_rumah brida.png`: logo putih footer.
-- `berita 1.jpeg` dan `berita 2.jpeg`: sisa aset berita statis, sudah tidak
-  diimpor kode mana pun sejak berita pindah ke database dan tidak ikut masuk
-  hasil build. Gambar berita sekarang diunggah admin ke disk `public`.
+- `logo-fix.webp`: logo navbar (320px, alpha; 11 KB, pengganti `logo_fix.png`
+  207 KB).
+- `logo-rumah-brida.webp`: logo putih footer (384px, alpha; 15 KB, pengganti
+  `logo_rumah brida.png` 579 KB). Ukuran ekspor sengaja 2x lebar tampil
+  (navbar 154px, footer 128px) agar tajam di layar retina.
+- Aset berita statis (`berita 1.jpeg`, `berita 2.jpeg`) sudah dihapus; gambar
+  berita kini diunggah admin ke disk `public` dan dioptimalkan backend.
 
 Chevron submenu dibuat dengan CSS melalui `AnimatedChevron.jsx`; tidak memakai
 Lottie atau dependency animasi. Tambahkan item ke array `submenu` di `Header.jsx`
@@ -546,7 +557,8 @@ seeder diverifikasi utuh. Skrip uji sementara sudah dihapus, bukan bagian repo.
 
 ## 10. Menjalankan Lokal
 
-Prasyarat: PHP 8.3+, Composer, MySQL, dan Node.js 22.13+.
+Prasyarat: PHP 8.3+ dengan ekstensi GD (wajib untuk optimasi gambar berita),
+Composer, MySQL, dan Node.js 22.13+.
 
 Siapkan MySQL satu kali:
 
@@ -621,15 +633,18 @@ Perubahan berita harus diuji minimal untuk daftar publik (hanya `published`,
 `content` kosong, `limit` dijepit), detail publik termasuk draft yang 404,
 penolakan tamu dan peneliti, create dengan slug otomatis serta gambar, draft
 tanpa `published_at`, validasi dan slug duplikat, update yang mempertahankan
-gambar lama lalu menggantinya, delete beserta kedua gambar, dan daftar admin
-yang memuat draft. Test berita memakai `Storage::fake('public')` karena gambar
+gambar lama lalu menggantinya, delete beserta kedua gambar, daftar admin
+yang memuat draft, serta optimasi gambar (JPEG besar jadi WebP ≤1600px, gambar
+kecil dienkode ulang tanpa resize, berkas tidak terproses tersimpan apa adanya).
+Test optimasi melewatkan diri sendiri (`markTestSkipped`) bila ekstensi GD tidak
+tersedia. Test berita memakai `Storage::fake('public')` karena gambar
 berita ada di disk `public`, berbeda dengan PDF proposal.
 
 ## 12. Batasan dan Prioritas Lanjutan
 
 Autentikasi, otorisasi, rate limiting, akses PDF privat, halaman Draft Saya,
-dashboard verifikasi admin, dialog konfirmasi hapus proposal, serta berita dari
-database dengan kelola berita admin sudah tersedia. Sisa prioritas, diurutkan
+dashboard verifikasi admin, dialog konfirmasi hapus proposal dan berita, serta
+berita dari database dengan kelola berita admin sudah tersedia. Sisa prioritas, diurutkan
 dari yang paling murah dan paling mendesak:
 
 1. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
@@ -637,9 +652,7 @@ dari yang paling murah dan paling mendesak:
    sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
    yang sedang dibuka.
 2. Bangun formulir dan alur menu Lapor.
-3. Optimalkan gambar besar untuk performa production; `logo_rumah brida.png`
-   masih di atas 500 kB pada hasil build.
-4. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
+3. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
 
 ## 13. Alur Kerja Git
 
