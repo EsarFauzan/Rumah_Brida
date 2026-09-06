@@ -523,11 +523,16 @@ tidak ada request pihak ketiga saat runtime dan tetap jalan offline:
   `:root` di `index.css`.
 - Font display: token `--font-display` di `:root` App.css berisi
   `'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter Variable', ...`.
-  Dipakai oleh `h1, h2, h3`, `.modal-target`, semua `button`, serta
-  input/select/textarea pada `.research-form-card`, `.admin-news-form`, dan
-  `.admin-result-item`. Aturan input ini wajib dipertahankan: form control
-  tidak mewarisi `font-family`, jadi tanpa itu field dirender font sistem
-  default dan terlihat tak serasi.
+  Dipakai oleh `h1, h2, h3`, `.modal-target`, semua `button`, tombol yang
+  dibuat dari link (`a.primary-button`, `.account-button`, `.result-action`,
+  `.account-menu-link`, `.account-menu-logout`, `.mobile-account-actions a`,
+  `.primary-form-link`, `.secondary-form-link`, `.results-header > a`,
+  `.proposal-detail-actions a`), serta input/select/textarea pada
+  `.research-form-card`, `.admin-news-form`, dan `.admin-result-item`. Aturan
+  input dan daftar link-tombol ini wajib dipertahankan: form control tidak
+  mewarisi `font-family`, dan banyak tombol di UI ini adalah `<a>` bukan
+  `<button>`, jadi tanpa itu keduanya dirender font sistem default dan
+  terlihat tak serasi.
 - Weight 800 pada kicker/label kini asli (Plus Jakarta Sans variable punya
   rentang 200-800); sebelumnya fake-bold di Arial/Segoe UI yang hanya sampai
   700. `font-synthesis: none` di `index.css` mencegah bold palsu.
@@ -536,7 +541,15 @@ tidak ada request pihak ketiga saat runtime dan tetap jalan offline:
   (latin + latin-ext, total ~75 KB).
 
 Verifikasi terakhir tipografi: `npm run lint` bersih, `npm run build` sukses
-dengan kedua font ter-bundle.
+dengan kedua font ter-bundle, dan diuji di Chrome headless (CDP) dengan 27
+asersi lulus: font terunduh (document.fonts), penerapan Jakarta Sans pada
+h1/CTA/input/tab dan Inter pada body/paragraf di desktop 1440px, seluruh
+geometri navbar mengambang (puncak 76px/logo 58px, scroll fixed top 14px
+82vw glass radius 30px blur, logo 48px, kembali ke sticky, reduced-motion
+1ms tanpa gather), serta mobile 390px (header 68px, h1 36px via breakpoint
+420px, scroll floating 60px radius 24px logo 44px, hamburger + panel akun
+mobile + theme toggle 34px, submenu Riset via klik, tanpa overflow
+horizontal). Skrip uji sementara sudah dihapus, bukan bagian repo.
 
 ### Submenu berbasis klik
 
