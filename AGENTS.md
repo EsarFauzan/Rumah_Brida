@@ -29,6 +29,7 @@ Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
 | Autentikasi | Laravel Sanctum 4, bearer token API |
 | Database | MySQL, database `Rumah_brida` |
 | File proposal | Laravel private storage, disajikan lewat URL bertanda tangan |
+| Tema | Light/dark via `data-theme` di `<html>`, CSS variables, View Transition API |
 
 Frontend dan backend adalah dua aplikasi terpisah:
 
@@ -53,9 +54,11 @@ frontend/
   src/components/DeleteProposalModal.jsx Dialog hapus proposal (wrapper DeleteItemModal)
   src/components/DeleteNewsModal.jsx  Dialog hapus berita (wrapper DeleteItemModal)
   src/components/Footer.jsx           Footer global
+  src/components/ThemeToggle.jsx      Tombol light/dark dengan ripple View Transition
   src/components/HeroSection.jsx      Hero beranda
   src/components/NewsSection.jsx      Slider berita beranda
   src/hooks/useAuth.js                Hook sesi login (useSyncExternalStore)
+  src/hooks/useTheme.js               Hook tema aktif (useSyncExternalStore)
   src/pages/LoginPage.jsx             Halaman masuk dan daftar
   src/pages/AdminResearchProposalsPage.jsx Dashboard verifikasi proposal admin
   src/pages/AdminNewsPage.jsx            Form dan daftar kelola berita admin
@@ -66,6 +69,7 @@ frontend/
   src/pages/ResearchProposalDetailPage.jsx
   src/services/api.js                 Axios base URL dan interceptor token
   src/services/authStore.js           Penyimpanan token di sessionStorage
+  src/services/themeStore.js          Tema light/dark: persistensi + listener
   src/assets/image/                   Semua gambar aplikasi
 
 backend/
@@ -210,6 +214,51 @@ keyboard tetap memakai outline kuning. Jangan mengubah link `/masuk` atau logic
 `Lapor!` adalah item navigasi setelah `Lomba`, bukan tombol terpisah. Gunakan
 href `/#lapor` agar hash selalu kembali ke Beranda dari route lain; indikator
 aktifnya mengikuti item navigasi lain lewat `getActiveMenu()`.
+
+### Theme toggle (light/dark)
+
+Navbar memuat `ThemeToggle.jsx` di dalam `.header-account`, tepat di kiri tombol
+`Masuk`/profil, dengan gap 11px. Toggle 40x40px (radius 12px) di desktop dan
+34x34px (radius 10px) di mobile; ikon `Sun`/`Moon` dari `lucide-react`
+bercross-fade dengan rotate ±90deg dan scale saat tema berpindah (300ms).
+Tombol tidak boleh lebih dominan dari tombol `Masuk`.
+
+Arsitektur tema:
+
+- Tema global ditandai `<html data-theme="light|dark">`. Nilai awal disetel
+  skrip inline di `index.html` SEBELUM React dirender (baca localStorage kunci
+  `rumah-brida-theme`, fallback `prefers-color-scheme`) supaya tidak ada flash.
+- `themeStore.js` memegang tema aktif, menyimpan pilihan ke localStorage, dan
+  memberi tahu pelanggan; `useTheme.js` membacanya dengan `useSyncExternalStore`
+  (pola sama dengan `useAuth`).
+- Semua warna permukaan/teks di `App.css` memakai CSS variables yang didefinisi
+  di `:root` (light) dan `[data-theme='dark']`. Nilai light HARUS tetap persis
+  seperti desain lama; palet dark membalik peran: navy menjadi aksen terang,
+  tombol primer (`.account-button`, `.primary-form-*`, `.result-action.primary`,
+  avatar) memakai token `--btn-primary-*` yang di dark jadi terang dengan teks
+  navy. Link aktif navbar memakai `var(--navy)` sehingga di dark otomatis
+  terang. Warna `#fff` di hero/footer/modal-spinner memang teks putih di atas
+  dasar gelap dan sengaja tidak ditokenisasi.
+- Warna semantik (label kicker amber, status proposal, feedback form sukses/
+  error, kotak peringatan, tombol logout/hapus, dsb.) memakai token khusus
+  `--accent-amber*`, `--status-green`, `--success*`, `--danger*`, `--info*`,
+  `--logout*`, `--amber-*`, `--text-soft`. Nilai dark-nya BUKAN warna light
+  yang dipertahankan: teks dicerahkan (amber `#f0c05a`, hijau `#63d6a0`, merah
+  `#ff8f84`) dan latar kotak di-tint gelap transparan agar kontras tetap >= 4.5.
+  Aturan ini lahir dari laporan teks tidak terbaca saat mode gelap; jangan
+  memakai warna status light langsung di CSS baru, tokenisasi dulu.
+- Pergantian tema berlangsung INSTAN tanpa animasi halaman — efek ripple
+  View Transition sempat dibangun lalu dihapus atas keputusan pemilik. Yang
+  beranimasi hanya cross-fade ikon Sun/Moon (rotate ±90deg + scale, 300ms).
+  `prefers-reduced-motion: reduce` mematikan cross-fade tersebut.
+
+Verifikasi terakhir theme toggle: `npm run lint` bersih, `npm run build`
+sukses; mode instant terverifikasi CDP (tema berpindah, localStorage tersimpan,
+persisten lintas halaman dan reload, fallback `prefers-color-scheme`, layout
+mobile 390px, reduced-motion). Keterbacaan dark mode diaudit CDP dengan rasio
+kontras WCAG >= 4.5 pada beranda, hasil riset, form masuk, dan state kosong
+draft — 11 asersi lulus termasuk nilai token semantik dark. Skrip uji
+sementara sudah dihapus.
 
 Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
 Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
