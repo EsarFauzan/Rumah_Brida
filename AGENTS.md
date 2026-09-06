@@ -738,9 +738,10 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
   berita in-app lewat `DeleteItemModal`/`DeleteNewsModal`), dan
   `feat/optimasi-gambar` (logo WebP dan optimasi upload gambar berita dengan
   GD; dibuat bertumpuk di atas branch dialog, sehingga merge harus berurutan),
-  dan `feat/header-lapor-masuk` (`Lapor!` jadi item navigasi ber-href `/#lapor`
-  dan restyle tombol `Masuk`; diverifikasi di Chrome headless dengan 30 asersi
-  lulus).
+  dan `feat/theme-toggle` (toggle light/dark dengan tema global `data-theme`,
+  CSS variables, anti-flash `index.html`, persistence localStorage; ripple
+  View Transition sempat dibuat lalu dihapus, dan keterbacaan dark diaudit
+  kontras WCAG >= 4.5).
   Riwayatnya
   tetap terbaca di `main` lewat merge commit masing-masing.
 
