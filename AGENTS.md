@@ -536,6 +536,19 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
   `Proposal Riset` dan `Hasil Riset`; jangan mengubah fungsi `logout()`.
   Dropdown tertutup saat klik di luar area akun, Escape, membuka submenu Riset,
   atau membuka menu mobile. Pada Escape, fokus kembali ke tombol profil.
+- Pada route Beranda (`/`), `Header.jsx` menyimpan status `isScrolled` yang
+  berubah ketika scroll melewati 80px. Di puncak, header Beranda memakai style
+  sticky putih standar (`.site-header`), sama seperti header halaman lain.
+  Setelah discroll, `.is-scrolled` menjadikannya fixed sebagai navbar mengambang
+  di tengah (`82vw`, maksimum 1200px, top 14px, radius 30px, glass transparan
+  68%, blur/saturasi lembut). Pada state floating, wrapper logo harus tetap
+  transparan tanpa padding, background, border, radius, atau shadow tambahan;
+  logo langsung menyatu dengan surface navbar. Tinggi logo 58px pada state awal
+  dan 48px setelah scroll (`width: auto`, transisi 350ms). Header awal tidak
+  boleh diberi `left: 50%` atau `translateX(-50%)`, karena akan menggeser
+  navbar penuh. Saat `.is-scrolled` baru aktif, keyframe `navbar-gather`
+  (desktop) atau `navbar-gather-mobile` menyusutkan lebar dari kedua sisi ke
+  tengah selama 520ms; reduced-motion menonaktifkan keyframe tersebut.
 
 `App.css`:
 
@@ -552,6 +565,18 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
 - Tampilan panel dikontrol `.has-submenu.is-open > .submenu`, bukan `:hover` atau
   `:focus-within`. Di breakpoint mobile (≤760px) `.submenu` default
   `display: none` dan menjadi `display: block` saat `is-open`.
+
+Navbar Beranda pada mobile setelah discroll memakai margin 16px, tinggi 60px,
+dan radius 24px; navigasi tetap melalui hamburger. Di breakpoint mobile, area
+akun desktop disembunyikan agar tidak ada kontrol yang keluar viewport. Akses
+tema, Masuk, Dashboard Admin (untuk admin), Draft Saya, dan Keluar ditampilkan
+di dalam panel hamburger lewat `.mobile-account-actions`, memakai fungsi auth
+dan logout yang sama. Tombol hamburger diposisikan absolut pada sisi kanan
+header mobile agar tidak terdorong keluar oleh lebar konten. Hero Beranda
+memiliki tinggi minimum satu viewport dan berada dari y=0 di belakang header;
+konten diberi ruang atas, sedangkan
+`Background.jpeg` diberi overlay navy dari kiri ke kanan tanpa blur.
+`prefers-reduced-motion` juga memendekkan transisi header.
 
 Verifikasi terakhir: `npm run lint` bersih, `npm run build` sukses, dan hasil
 build diuji di Chrome headless (CDP) untuk hover/focus tidak membuka, klik

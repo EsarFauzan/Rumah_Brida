@@ -63,6 +63,8 @@ const getActiveMenu = () => {
 }
 
 function Header() {
+  const [isHome, setIsHome] = useState(() => window.location.pathname === '/')
+  const [isScrolled, setIsScrolled] = useState(() => window.scrollY > 80)
   const [isOpen, setIsOpen] = useState(false)
   const [openMenu, setOpenMenu] = useState(null)
   const [activeMenu, setActiveMenu] = useState(getActiveMenu)
@@ -144,7 +146,11 @@ function Header() {
   }, [isAccountMenuOpen, openMenu])
 
   useEffect(() => {
-    const syncActiveMenu = () => setActiveMenu(getActiveMenu())
+    const syncActiveMenu = () => {
+      setActiveMenu(getActiveMenu())
+      setIsHome(window.location.pathname === '/')
+      setIsScrolled(window.scrollY > 80)
+    }
 
     window.addEventListener('popstate', syncActiveMenu)
     window.addEventListener('hashchange', syncActiveMenu)
@@ -155,8 +161,20 @@ function Header() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isHome) return undefined
+
+    const handleScroll = () => setIsScrolled(window.scrollY > 80)
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [isHome])
+
+  const headerClassName = `site-header${isHome ? ' is-home' : ''}${isHome && !isScrolled ? ' is-hero-top' : ''}${isHome && isScrolled ? ' is-scrolled' : ''}`
+
   return (
-    <header className="site-header" ref={headerRef}>
+    <header className={headerClassName} ref={headerRef}>
       <div className="container header-inner">
         <a className="brand" href="/#beranda" aria-label="Rumah Brida - Beranda">
           <img src={logoRumahBrida} alt="Rumah BRIDA Sulawesi Tengah" />
@@ -227,6 +245,32 @@ function Header() {
               )
             })}
           </ul>
+          <div className="mobile-account-actions">
+            <ThemeToggle />
+            {isAuthenticated ? (
+              <>
+                {user?.role === 'admin' && (
+                  <a href="/admin/proposal" onClick={closeAll}>
+                    <LayoutDashboard size={16} strokeWidth={2.25} aria-hidden="true" />
+                    Dashboard Admin
+                  </a>
+                )}
+                <a href="/riset/draft" onClick={closeAll}>
+                  <FileText size={16} strokeWidth={2.25} aria-hidden="true" />
+                  Draft Saya
+                </a>
+                <button type="button" disabled={isLoggingOut} onClick={logout}>
+                  <LogOut size={16} strokeWidth={2.25} aria-hidden="true" />
+                  {isLoggingOut ? 'Keluar...' : 'Keluar'}
+                </button>
+              </>
+            ) : (
+              <a href="/masuk" onClick={closeAll}>
+                <UserRound size={16} strokeWidth={1.9} aria-hidden="true" />
+                Masuk
+              </a>
+            )}
+          </div>
         </nav>
 
         <div className={`header-account${isAccountMenuOpen ? ' is-open' : ''}`} ref={accountRef}>
