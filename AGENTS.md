@@ -239,21 +239,26 @@ Arsitektur tema:
   navy. Link aktif navbar memakai `var(--navy)` sehingga di dark otomatis
   terang. Warna `#fff` di hero/footer/modal-spinner memang teks putih di atas
   dasar gelap dan sengaja tidak ditokenisasi.
-- Efek pergantian tema: `document.startViewTransition()` + animasi
-  `clip-path: circle()` pada `::view-transition-new(root)` dari koordinat tengah
-  tombol toggle (600ms, `cubic-bezier(0.4, 0, 0.2, 1)`), dianimasikan lewat
-  `element.animate(..., { pseudoElement: '::view-transition-new(root)' })` di
-  `ThemeToggle.jsx`. Browser tanpa View Transition API atau pengguna dengan
-  `prefers-reduced-motion: reduce` mendapat pergantian instan tanpa ripple.
-  Aturan `::view-transition-*` ada di `App.css` dekat `.theme-toggle`.
+- Warna semantik (label kicker amber, status proposal, feedback form sukses/
+  error, kotak peringatan, tombol logout/hapus, dsb.) memakai token khusus
+  `--accent-amber*`, `--status-green`, `--success*`, `--danger*`, `--info*`,
+  `--logout*`, `--amber-*`, `--text-soft`. Nilai dark-nya BUKAN warna light
+  yang dipertahankan: teks dicerahkan (amber `#f0c05a`, hijau `#63d6a0`, merah
+  `#ff8f84`) dan latar kotak di-tint gelap transparan agar kontras tetap >= 4.5.
+  Aturan ini lahir dari laporan teks tidak terbaca saat mode gelap; jangan
+  memakai warna status light langsung di CSS baru, tokenisasi dulu.
+- Pergantian tema berlangsung INSTAN tanpa animasi halaman — efek ripple
+  View Transition sempat dibangun lalu dihapus atas keputusan pemilik. Yang
+  beranimasi hanya cross-fade ikon Sun/Moon (rotate ±90deg + scale, 300ms).
+  `prefers-reduced-motion: reduce` mematikan cross-fade tersebut.
 
 Verifikasi terakhir theme toggle: `npm run lint` bersih, `npm run build`
-sukses, dan 32 asersi CDP lulus di Chrome headless: ukuran/radius/gap toggle,
-posisi kiri `Masuk`, ikon Moon/Sun per tema, `aria-pressed`/`aria-label`,
-`data-theme` + localStorage setelah klik, body/header/nav ikut gelap, reload
-mempertahankan dark (anti-flash), fallback `prefers-color-scheme` dua arah
-(lewat emulasi media), layout mobile 390px, dan reduced-motion tanpa View
-Transition. Skrip uji sementara sudah dihapus.
+sukses; mode instant terverifikasi CDP (tema berpindah, localStorage tersimpan,
+persisten lintas halaman dan reload, fallback `prefers-color-scheme`, layout
+mobile 390px, reduced-motion). Keterbacaan dark mode diaudit CDP dengan rasio
+kontras WCAG >= 4.5 pada beranda, hasil riset, form masuk, dan state kosong
+draft — 11 asersi lulus termasuk nilai token semantik dark. Skrip uji
+sementara sudah dihapus.
 
 Rate limiter didefinisikan di `AppServiceProvider::configureRateLimiting()`.
 Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
