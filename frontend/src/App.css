@@ -47,6 +47,9 @@
   --footer-link: #c5d1df;
   --footer-social: #aebdd0;
   --form-heading: #111827;
+  --scrolled-ink: #e8eef5;
+  --scrolled-ink-active: #f6c84b;
+  --scrolled-line: rgba(255, 255, 255, 0.22);
   --accent-amber: #b28316;
   --accent-amber-deep: #b77b0c;
   --accent-amber-ink: #805d08;
@@ -117,6 +120,9 @@
   --footer-link: #c3d2e4;
   --footer-social: #a9bad1;
   --form-heading: #dbe7f6;
+  --scrolled-ink: #0b2347;
+  --scrolled-ink-active: #071b35;
+  --scrolled-line: rgba(11, 35, 71, 0.25);
   /* Status & aksen semantik (dark) — teks dicerahkan, latar di-tint gelap */
   --accent-amber: #f0c05a;
   --accent-amber-deep: #edc26a;
@@ -155,10 +161,10 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
 
 .site-header {
-  position: sticky; top: 0; z-index: 50; height: 76px;
-  background: var(--header-bg); border-bottom: 1px solid var(--header-line);
+  position: sticky; top: 0; z-index: 50; height: 76px; margin-inline: auto;
+  background: var(--header-bg); border: 1px solid transparent; border-bottom-color: var(--header-line);
   box-shadow: 0 4px 18px var(--shadow-header); backdrop-filter: blur(10px);
-  transition: width .4s cubic-bezier(.4, 0, .2, 1), height .4s cubic-bezier(.4, 0, .2, 1), top .4s cubic-bezier(.4, 0, .2, 1), transform .4s cubic-bezier(.4, 0, .2, 1), padding .4s cubic-bezier(.4, 0, .2, 1), border-radius .4s cubic-bezier(.4, 0, .2, 1), background .3s ease, border-color .3s ease, box-shadow .3s ease;
+  transition: width 520ms cubic-bezier(.22, .8, .24, 1), transform 520ms cubic-bezier(.4, 0, .2, 1), border-radius 520ms cubic-bezier(.4, 0, .2, 1), background-color 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
 }
 .header-inner { height: 100%; display: flex; align-items: center; }
 .brand { display: inline-flex; align-items: center; color: var(--navy-deep); text-decoration: none; }
@@ -194,13 +200,32 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .main-nav li > a:focus-visible::after,
 .main-nav li > .nav-trigger:focus-visible::after { transform: scaleX(1); }
 
-/* Beranda: header putih standar di puncak, lalu floating navbar saat scroll. */
-.site-header.is-home.is-scrolled { position: fixed; top: 14px; left: 50%; width: min(82vw, 1200px); height: 64px; transform: translateX(-50%); transform-origin: center; background: color-mix(in srgb, var(--surface) 68%, transparent); border: 1px solid rgba(255,255,255,.46); border-radius: 30px; box-shadow: 0 10px 28px rgba(5,27,53,.16); backdrop-filter: blur(18px) saturate(145%); animation: navbar-gather 520ms cubic-bezier(.22, .8, .24, 1) both; }
-.site-header.is-home.is-scrolled .brand { padding: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; }
-.site-header.is-home.is-scrolled .header-inner { width: min(100% - 32px, 1120px); margin: 0 auto; }
-.site-header.is-home.is-scrolled .brand img { width: auto; height: 48px; }
-.site-header.is-home.is-scrolled .main-nav li > a,
-.site-header.is-home.is-scrolled .main-nav li > .nav-trigger { padding-top: 21px; padding-bottom: 19px; }
+/* Semua halaman: header terang di puncak, lalu navbar mengambang navy saat tergulir.
+   Tinta memakai token karena var(--navy) berperan terang di dark mode. Aturan tinta
+   dan akun di-scope desktop: di mobile panel menu mengikuti warna surface standar. */
+.site-header.is-scrolled { background: var(--navy); border-color: transparent; border-radius: 30px; box-shadow: 0 10px 28px rgba(5, 27, 53, .28); width: min(82vw, 1200px); padding: 0 22px; transform: translateY(8px); }
+.site-header.is-scrolled .brand img { width: auto; height: 48px; }
+.site-header.is-scrolled .menu-toggle span { background: var(--scrolled-ink); }
+@media (min-width: 761px) {
+  .site-header.is-scrolled .main-nav li > a,
+  .site-header.is-scrolled .main-nav li > .nav-trigger { color: var(--scrolled-ink); }
+  .site-header.is-scrolled .main-nav li > a:hover,
+  .site-header.is-scrolled .main-nav li > .nav-trigger:hover,
+  .site-header.is-scrolled .main-nav li > .nav-trigger[aria-expanded='true'],
+  .site-header.is-scrolled .main-nav li > a.is-active,
+  .site-header.is-scrolled .main-nav li > .nav-trigger.is-active { color: var(--scrolled-ink-active); }
+  .site-header.is-scrolled .main-nav li > a:focus-visible,
+  .site-header.is-scrolled .main-nav li > .nav-trigger:focus-visible { color: var(--scrolled-ink-active); outline-color: var(--scrolled-ink-active); }
+  .site-header.is-scrolled .theme-toggle { color: var(--scrolled-ink); background: transparent; border-color: var(--scrolled-line); }
+  .site-header.is-scrolled .theme-toggle:hover { border-color: var(--scrolled-ink-active); }
+  .site-header.is-scrolled .profile-button { color: var(--scrolled-ink); background: transparent; border-color: var(--scrolled-line); }
+  .site-header.is-scrolled .account-avatar { color: #202b3c; background: var(--yellow); }
+  .site-header.is-scrolled .account-chevron { color: var(--scrolled-ink); background: transparent; border-color: var(--scrolled-line); }
+  .site-header.is-scrolled .header-account::before { background: var(--scrolled-line); }
+  .site-header.is-scrolled .submenu { background: rgba(7, 27, 53, .92); border-color: rgba(255,255,255,.14); }
+  .site-header.is-scrolled .submenu a { color: #e8eef5; }
+  .site-header.is-scrolled .submenu a:hover { color: #fff; background: rgba(255,255,255,.08); }
+}
 .chevron-icon {
   position: relative;
   flex: 0 0 14px; width: 14px; height: 14px;
@@ -222,17 +247,9 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
   0%, 100% { transform: translateY(-1.5px); }
   50% { transform: translateY(1.5px); }
 }
-@keyframes navbar-gather {
-  from { top: 0; width: 100vw; height: 76px; transform: translateX(-50%); border-radius: 0; background: var(--header-bg); border-color: var(--header-line); box-shadow: 0 4px 18px var(--shadow-header); }
-  to { top: 14px; width: min(82vw, 1200px); height: 64px; transform: translateX(-50%); border-radius: 30px; }
-}
-@keyframes navbar-gather-mobile {
-  from { top: 0; width: 100vw; height: 68px; transform: translateX(-50%); border-radius: 0; background: var(--header-bg); border-color: var(--header-line); box-shadow: 0 4px 18px var(--shadow-header); }
-  to { top: 12px; width: calc(100% - 32px); height: 60px; transform: translateX(-50%); border-radius: 24px; }
-}
 @media (prefers-reduced-motion: reduce) {
   .site-header { transition-duration: 1ms; }
-  .site-header.is-home.is-scrolled { animation: none; }
+  .brand img { transition-duration: 1ms; }
   .chevron-icon { animation: none; transform: none; }
   .chevron-icon::before { transition-duration: 1ms; }
   .main-nav li > a,
@@ -604,15 +621,12 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 @media (max-width: 760px) {
   .container { width: min(100% - 32px, 1120px); }
   .site-header { height: 68px; }
-  .site-header.is-home.is-scrolled { top: 12px; width: calc(100% - 32px); height: 60px; border-radius: 24px; animation-name: navbar-gather-mobile; }
-  .site-header.is-home.is-scrolled .header-inner { width: calc(100% - 24px); }
-  .site-header.is-home.is-scrolled .brand img { width: auto; height: 44px; }
+  .site-header.is-scrolled { width: calc(100% - 24px); border-radius: 24px; padding: 0 14px; }
+  .site-header.is-scrolled .brand img { width: auto; height: 44px; }
   .brand img { width: auto; height: 52px; }
   .menu-toggle { position: absolute; top: 14px; right: 16px; z-index: 2; width: 40px; height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; margin: 0; padding: 0; background: transparent; border: 0; cursor: pointer; }
   .menu-toggle span { width: 21px; height: 2px; background: var(--navy); }
-  .main-nav { order: 4; position: absolute; top: 68px; left: 0; right: 0; display: none; margin: 0; padding: 12px 16px 18px; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 14px 24px rgba(16,42,78,.12); }
-  .site-header.is-home.is-scrolled .main-nav { top: 60px; }
-  .site-header.is-home.is-scrolled .menu-toggle { top: 10px; right: 12px; }
+  .main-nav { order: 4; position: absolute; top: 100%; left: 0; right: 0; display: none; margin: 0; padding: 12px 16px 18px; background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 14px 24px rgba(16,42,78,.12); }
   .main-nav.is-open { display: block; }
   .main-nav ul { display: block; }
   .main-nav li > a,

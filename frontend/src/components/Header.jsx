@@ -63,7 +63,6 @@ const getActiveMenu = () => {
 }
 
 function Header() {
-  const [isHome, setIsHome] = useState(() => window.location.pathname === '/')
   const [isScrolled, setIsScrolled] = useState(() => window.scrollY > 80)
   const [isOpen, setIsOpen] = useState(false)
   const [openMenu, setOpenMenu] = useState(null)
@@ -148,7 +147,6 @@ function Header() {
   useEffect(() => {
     const syncActiveMenu = () => {
       setActiveMenu(getActiveMenu())
-      setIsHome(window.location.pathname === '/')
       setIsScrolled(window.scrollY > 80)
     }
 
@@ -162,16 +160,14 @@ function Header() {
   }, [])
 
   useEffect(() => {
-    if (!isHome) return undefined
-
     const handleScroll = () => setIsScrolled(window.scrollY > 80)
     handleScroll()
     window.addEventListener('scroll', handleScroll, { passive: true })
 
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [isHome])
+  }, [])
 
-  const headerClassName = `site-header${isHome ? ' is-home' : ''}${isHome && !isScrolled ? ' is-hero-top' : ''}${isHome && isScrolled ? ' is-scrolled' : ''}`
+  const headerClassName = `site-header${isScrolled ? ' is-scrolled' : ''}`
 
   return (
     <header className={headerClassName} ref={headerRef}>
