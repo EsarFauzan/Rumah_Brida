@@ -24,7 +24,7 @@ Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
 
 | Bagian | Teknologi |
 |---|---|
-| Frontend | React 19, Vite 8, Axios, lucide-react, react-icons, CSS biasa |
+| Frontend | React 19, Vite 8, Axios, lucide-react, react-icons, CSS biasa, font self-host @fontsource |
 | Backend | Laravel 13, PHP 8.3+ |
 | Autentikasi | Laravel Sanctum 4, bearer token API |
 | Database | MySQL, database `Rumah_brida` |
@@ -507,6 +507,37 @@ Tombol slider memakai `.slider-chevron` CSS, bukan karakter teks; hover/focus
 memberi perpindahan kecil sesuai arah chevron dan latar tombol kuning. Aturan
 `prefers-reduced-motion` menonaktifkan transform tombol dan chevron tersebut.
 
+### Tipografi
+
+Font dimuat self-host lewat npm (@fontsource), bukan Google Fonts CDN, supaya
+tidak ada request pihak ketiga saat runtime dan tetap jalan offline:
+
+- Dependency: `@fontsource-variable/inter` dan
+  `@fontsource-variable/plus-jakarta-sans`. Import `wght.css` keduanya ada di
+  `main.jsx`, SEBELUM `./index.css`. Jangan ganti ke `index.css` (ikut
+  menyertakan subset italic yang tidak dipakai) dan jangan hapus import-nya —
+  tanpa itu CSS memuat nama font yang tidak pernah diunduh dan seluruh situs
+  kembali memakai font fallback OS (Segoe UI/Arial/Roboto) sehingga tampilan
+  berbeda di tiap perangkat.
+- Font body: `'Inter Variable', Inter, "Segoe UI", Arial, sans-serif` pada
+  `:root` di `index.css`.
+- Font display: token `--font-display` di `:root` App.css berisi
+  `'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter Variable', ...`.
+  Dipakai oleh `h1, h2, h3`, `.modal-target`, semua `button`, serta
+  input/select/textarea pada `.research-form-card`, `.admin-news-form`, dan
+  `.admin-result-item`. Aturan input ini wajib dipertahankan: form control
+  tidak mewarisi `font-family`, jadi tanpa itu field dirender font sistem
+  default dan terlihat tak serasi.
+- Weight 800 pada kicker/label kini asli (Plus Jakarta Sans variable punya
+  rentang 200-800); sebelumnya fake-bold di Arial/Segoe UI yang hanya sampai
+  700. `font-synthesis: none` di `index.css` mencegah bold palsu.
+- Kedua font variable memakai `font-display: swap` bawaan fontsource dan
+  dipecah per unicode-range; Vite hanya mengirim subset yang terpakai
+  (latin + latin-ext, total ~75 KB).
+
+Verifikasi terakhir tipografi: `npm run lint` bersih, `npm run build` sukses
+dengan kedua font ter-bundle.
+
 ### Submenu berbasis klik
 
 Submenu hanya terbuka lewat klik, bukan hover atau focus.
@@ -753,8 +784,10 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
 - `backend/.env` sudah masuk `.gitignore` dan tidak boleh ikut di-commit.
 - Branch fitur dihapus setelah merge, di lokal dengan `git branch -d` dan di
   remote dengan `git push origin --delete <branch>`; jangan pakai `-D`.
-- Saat ini hanya `main` yang tersisa di lokal dan remote. Semua branch fitur
-  sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
+- Saat ini ada dua branch fitur aktif: `feat/floating-hero-navbar` (navbar
+  beranda mengambang saat scroll) dan `feat/typografi` (font self-host, dibuat
+  bertumpuk di atas branch navbar sehingga merge harus berurutan). Branch fitur
+  yang sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
   proposal, rate limiting, halaman `/masuk`), `feat/pdf-akses-privat` (storage
   privat dan URL bertanda tangan), `feat/draft-saya` (halaman Draft Saya,
   pagination, dashboard verifikasi admin, dan `DeleteProposalModal`), dan
@@ -782,3 +815,5 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
   sering gagal. Jika terjadi lagi, edit dalam potongan kecil lalu normalkan
   seluruh file ke satu jenis line ending.
 - Selalu jalankan build/lint frontend dan test/formatter backend sesuai scope.
+- Setiap selesai mengubah kode, perbarui juga AGENTS.md agar dokumentasi
+  selalu sinkron dengan implementasi.
