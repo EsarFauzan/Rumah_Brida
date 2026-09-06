@@ -597,16 +597,18 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
   80px, berlaku di SEMUA route. Di puncak, header memakai style sticky terang
   standar (`.site-header`): latar `--header-bg` 97%, tinggi 76px, garis bawah
   tipis, logo 58px. Setelah discroll, `.is-scrolled` memorph header menjadi
-  navbar mengambang navy (`var(--navy)`, radius 30px, width min(82vw, 1200px),
-  translateY(8px), shadow dalam) TANPA meninggalkan `position: sticky` — slot
+  navbar kaca mengambang (glass `color-mix(var(--surface) 68%, transparent)`,
+  blur 18px saturate 145%, radius 30px, width min(82vw, 1200px),
+  translateY(8px), shadow lembut) TANPA meninggalkan `position: sticky` — slot
   header tetap di alur dokumen sehingga tidak ada layout shift, tinggi tetap
-  76px, logo menyusut ke 48px. Tinta navbar tergulir memakai token
-  `--scrolled-ink`, `--scrolled-ink-active`, `--scrolled-line` (light: teks
-  terang di atas navy; dark: navy di atas aksen terang, karena `var(--navy)`
-  berperan terang di dark) dan aturan tinta di-scope `min-width: 761px` supaya
-  panel menu mobile tetap memakai surface standar. Jangan mengganti mekanisme
-  ini kembali ke `position: fixed` atau keyframe `navbar-gather`; keduanya
-  sudah dihapus karena menyebabkan lompatan konten di halaman non-beranda.
+  76px, logo menyusut ke 48px. Latar glass memakai `--surface` sehingga di
+  dark mode otomatis menjadi kaca gelap; tinta nav TIDAK dioverride (warna
+  standar header sudah terbaca di atas glass) — jangan menambahkan warna navy
+  solid atau token tinta tergulir seperti versi sebelumnya. Panel submenu
+  desktop saat tergulir memakai glass 94% agar tetap terbaca. Jangan mengganti
+  mekanisme ini kembali ke `position: fixed` atau keyframe `navbar-gather`;
+  keduanya sudah dihapus karena menyebabkan lompatan konten di halaman
+  non-beranda.
 
 `App.css`:
 
@@ -637,12 +639,12 @@ konten diberi ruang atas, sedangkan
 `Background.jpeg` diberi overlay navy dari kiri ke kanan tanpa blur.
 `prefers-reduced-motion` juga memendekkan transisi header.
 
-Verifikasi terakhir navbar semua halaman: `npm run lint` bersih, `npm run
-build` sukses, dan 17 asersi CDP lulus (morph navy di beranda dan subhalaman
-tanpa layout shift, kontras tinta light 12.29:1 / dark 5.98:1, reduced-motion
-1ms, mobile 390px: garis hamburger berganti tinta, panel menu terang di bawah
-navbar tanpa rembesan tinta terang, tanpa overflow horizontal). Skrip uji
-tersebut sementara dan sudah dihapus, bukan bagian repo.
+Verifikasi terakhir navbar glass semua halaman: `npm run lint` bersih, `npm run
+build` sukses, dan 12 asersi CDP lulus (glass 68% + blur di beranda, subhalaman,
+dark otomatis kaca gelap dari `--surface`, tinta nav standar tanpa override,
+tanpa layout shift, reduced-motion 1ms, mobile 390px: glass 24px, hamburger
+navy, panel menu standar, tanpa overflow horizontal). Skrip uji tersebut
+sementara dan sudah dihapus, bukan bagian repo.
 
 ### Dialog konfirmasi hapus
 

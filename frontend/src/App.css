@@ -47,9 +47,6 @@
   --footer-link: #c5d1df;
   --footer-social: #aebdd0;
   --form-heading: #111827;
-  --scrolled-ink: #e8eef5;
-  --scrolled-ink-active: #f6c84b;
-  --scrolled-line: rgba(255, 255, 255, 0.22);
   --accent-amber: #b28316;
   --accent-amber-deep: #b77b0c;
   --accent-amber-ink: #805d08;
@@ -120,9 +117,6 @@
   --footer-link: #c3d2e4;
   --footer-social: #a9bad1;
   --form-heading: #dbe7f6;
-  --scrolled-ink: #0b2347;
-  --scrolled-ink-active: #071b35;
-  --scrolled-line: rgba(11, 35, 71, 0.25);
   /* Status & aksen semantik (dark) — teks dicerahkan, latar di-tint gelap */
   --accent-amber: #f0c05a;
   --accent-amber-deep: #edc26a;
@@ -200,31 +194,13 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .main-nav li > a:focus-visible::after,
 .main-nav li > .nav-trigger:focus-visible::after { transform: scaleX(1); }
 
-/* Semua halaman: header terang di puncak, lalu navbar mengambang navy saat tergulir.
-   Tinta memakai token karena var(--navy) berperan terang di dark mode. Aturan tinta
-   dan akun di-scope desktop: di mobile panel menu mengikuti warna surface standar. */
-.site-header.is-scrolled { background: var(--navy); border-color: transparent; border-radius: 30px; box-shadow: 0 10px 28px rgba(5, 27, 53, .28); width: min(82vw, 1200px); padding: 0 22px; transform: translateY(8px); }
+/* Semua halaman: header terang di puncak, lalu navbar kaca mengambang saat tergulir.
+   Latar memakai --surface sehingga glass ikut gelap di dark mode; tinta nav tidak
+   dioverride karena warna standar header sudah terbaca di atas glass. */
+.site-header.is-scrolled { background: color-mix(in srgb, var(--surface) 68%, transparent); border-color: transparent; border-radius: 30px; box-shadow: 0 10px 28px rgba(5, 27, 53, .18); backdrop-filter: blur(18px) saturate(145%); width: min(82vw, 1200px); padding: 0 22px; transform: translateY(8px); }
 .site-header.is-scrolled .brand img { width: auto; height: 48px; }
-.site-header.is-scrolled .menu-toggle span { background: var(--scrolled-ink); }
 @media (min-width: 761px) {
-  .site-header.is-scrolled .main-nav li > a,
-  .site-header.is-scrolled .main-nav li > .nav-trigger { color: var(--scrolled-ink); }
-  .site-header.is-scrolled .main-nav li > a:hover,
-  .site-header.is-scrolled .main-nav li > .nav-trigger:hover,
-  .site-header.is-scrolled .main-nav li > .nav-trigger[aria-expanded='true'],
-  .site-header.is-scrolled .main-nav li > a.is-active,
-  .site-header.is-scrolled .main-nav li > .nav-trigger.is-active { color: var(--scrolled-ink-active); }
-  .site-header.is-scrolled .main-nav li > a:focus-visible,
-  .site-header.is-scrolled .main-nav li > .nav-trigger:focus-visible { color: var(--scrolled-ink-active); outline-color: var(--scrolled-ink-active); }
-  .site-header.is-scrolled .theme-toggle { color: var(--scrolled-ink); background: transparent; border-color: var(--scrolled-line); }
-  .site-header.is-scrolled .theme-toggle:hover { border-color: var(--scrolled-ink-active); }
-  .site-header.is-scrolled .profile-button { color: var(--scrolled-ink); background: transparent; border-color: var(--scrolled-line); }
-  .site-header.is-scrolled .account-avatar { color: #202b3c; background: var(--yellow); }
-  .site-header.is-scrolled .account-chevron { color: var(--scrolled-ink); background: transparent; border-color: var(--scrolled-line); }
-  .site-header.is-scrolled .header-account::before { background: var(--scrolled-line); }
-  .site-header.is-scrolled .submenu { background: rgba(7, 27, 53, .92); border-color: rgba(255,255,255,.14); }
-  .site-header.is-scrolled .submenu a { color: #e8eef5; }
-  .site-header.is-scrolled .submenu a:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .site-header.is-scrolled .submenu { background: color-mix(in srgb, var(--surface) 94%, transparent); }
 }
 .chevron-icon {
   position: relative;
