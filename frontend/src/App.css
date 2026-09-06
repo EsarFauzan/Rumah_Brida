@@ -142,7 +142,7 @@ body {
   transition: background-color 240ms ease, color 240ms ease;
 }
 
-h1, h2, h3, .modal-target, button, .slider-dots button { font-family: var(--font-display); }
+h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-action, .account-menu-link, .account-menu-logout, .mobile-account-actions a, .primary-form-link, .secondary-form-link, .results-header > a, .proposal-detail-actions a { font-family: var(--font-display); }
 
 .site-shell { min-height: 100vh; background: var(--bg); }
 .container { width: min(1120px, calc(100% - 40px)); margin: 0 auto; }
