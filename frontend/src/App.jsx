@@ -11,6 +11,8 @@ import ResearchProposalDetailPage from './pages/ResearchProposalDetailPage'
 import AdminResearchProposalsPage from './pages/AdminResearchProposalsPage'
 import AdminNewsPage from './pages/AdminNewsPage'
 import Footer from './components/Footer'
+import InovasiInputPage from './pages/InovasiInputPage'
+import InovasiInfoPage from './pages/InovasiInfoPage'
 import './App.css'
 
 function App() {
@@ -61,6 +63,19 @@ function App() {
       return <AdminResearchProposalsPage />
     }
     if (pathname === '/admin/berita') return <AdminNewsPage />
+
+    const inovasiEditMatch = pathname.match(/^\/inovasi\/edit\/(\d+)$/)
+    if (inovasiEditMatch) {
+      return <InovasiInputPage innovationId={inovasiEditMatch[1]} />
+    }
+
+    if (pathname === '/inovasi/input') {
+      return <InovasiInputPage />
+    }
+
+    if (pathname === '/inovasi/info') {
+      return <InovasiInfoPage />
+    }
 
     return (
       <>

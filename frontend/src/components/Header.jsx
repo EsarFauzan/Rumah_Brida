@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, FileText, LayoutDashboard, LogOut, Newspaper, UserRound } from 'lucide-react'
+import {
+  ChevronDown,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Newspaper,
+  UserRound,
+  ClipboardList,
+  Info,
+  Microscope,
+  FileCheck2,
+} from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo-fix.webp'
+import logoRumahBridaDark from '../assets/image/logo-fix-dark.png'
+import useTheme from '../hooks/useTheme'
 import AnimatedChevron from './AnimatedChevron'
 import ThemeToggle from './ThemeToggle'
 import useAuth from '../hooks/useAuth'
@@ -13,13 +26,21 @@ const menuItems = [
     label: 'Riset',
     href: '/riset/proposal',
     submenu: [
-      { label: 'Proposal Riset', href: '/riset/proposal' },
-      { label: 'Hasil Riset', href: '/riset/hasil' },
+      { label: 'Proposal Riset', href: '/riset/proposal', desc: 'Ajukan proposal riset baru', icon: FileCheck2 },
+      { label: 'Hasil Riset', href: '/riset/hasil', desc: 'Lihat publikasi hasil riset', icon: Microscope },
     ],
   },
-  { label: 'Inovasi', href: '#inovasi', submenu: [] },
+  {
+    label: 'Inovasi',
+    href: '/inovasi/input',
+    submenu: [
+      { label: 'Input Inovasi', href: '/inovasi/input', desc: 'Daftarkan inovasi daerah', icon: ClipboardList },
+      { label: 'Info', href: '/inovasi/info', desc: 'Jelajahi data inovasi', icon: Info },
+    ],
+  },
+  { label: 'Info Publik', href: '/info-publik' },
   { label: 'Lomba', href: '#lomba', submenu: [] },
-  { label: 'Lapor!', href: '/#lapor' },
+  { label: 'Lapor!', href: 'https://sp4n.lapor.go.id/', external: true },
 ]
 
 const submenuId = (label) => `submenu-${label.toLowerCase().replace(/\s+/g, '-')}`
@@ -41,6 +62,14 @@ const getActiveMenu = () => {
 
   if (pathname === '/riset' || pathname.startsWith('/riset/')) {
     return 'Riset'
+  }
+
+  if (pathname === '/inovasi' || pathname.startsWith('/inovasi/')) {
+    return 'Inovasi'
+  }
+
+  if (pathname === '/info-publik' || pathname.startsWith('/info-publik/')) {
+    return 'Info Publik'
   }
 
   if (pathname === '/') {
@@ -70,6 +99,7 @@ function Header() {
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const { isAuthenticated, user } = useAuth()
+  const theme = useTheme()
   const headerRef = useRef(null)
   const accountRef = useRef(null)
   const accountButtonRef = useRef(null)
@@ -171,9 +201,10 @@ function Header() {
 
   return (
     <header className={headerClassName} ref={headerRef}>
+      <style>{submenuStyles}</style>
       <div className="container header-inner">
         <a className="brand" href="/#beranda" aria-label="Rumah Brida - Beranda">
-          <img src={logoRumahBrida} alt="Rumah BRIDA Sulawesi Tengah" />
+          <img src={theme === 'dark' ? logoRumahBridaDark : logoRumahBrida} alt="Rumah BRIDA Sulawesi Tengah" />
         </a>
 
         <button className="menu-toggle" type="button" aria-label="Buka menu navigasi"
@@ -211,30 +242,47 @@ function Header() {
                     </button>
                   ) : (
                     <a
-                      className={isActive ? 'is-active' : ''}
-                      href={item.href}
-                      onClick={() => {
-                        closeAll()
-                        setActiveMenu(item.label)
-                      }}
-                    >
-                      {item.label}
-                    </a>
+                      
+  className={isActive ? 'is-active' : ''}
+  href={item.href}
+  target={item.external ? '_blank' : undefined}
+  rel={item.external ? 'noopener noreferrer' : undefined}
+  onClick={() => {
+    if (!item.external) {
+      closeAll()
+      setActiveMenu(item.label)
+    }
+  }}
+>
+  {item.label}
+</a>
                   )}
                   {hasSubmenu && (
-                    <div className="submenu" id={panelId}>
-                      {item.submenu.map((subitem) => (
-                        <a
-                          key={subitem.label}
-                          href={subitem.href}
-                          onClick={() => {
-                            closeAll()
-                            setActiveMenu(item.label)
-                          }}
-                        >
-                          {subitem.label}
-                        </a>
-                      ))}
+                    <div className="submenu subm-rich" id={panelId}>
+                      {item.submenu.map((subitem) => {
+                        const SubIcon = subitem.icon
+                        return (
+                          <a
+                            key={subitem.label}
+                            className="subm-item"
+                            href={subitem.href}
+                            onClick={() => {
+                              closeAll()
+                              setActiveMenu(item.label)
+                            }}
+                          >
+                            {SubIcon && (
+                              <span className="subm-icon">
+                                <SubIcon size={17} strokeWidth={2} aria-hidden="true" />
+                              </span>
+                            )}
+                            <span className="subm-text">
+                              <span className="subm-title">{subitem.label}</span>
+                              {subitem.desc && <span className="subm-desc">{subitem.desc}</span>}
+                            </span>
+                          </a>
+                        )
+                      })}
                     </div>
                   )}
                 </li>
@@ -325,5 +373,115 @@ function Header() {
     </header>
   )
 }
+
+const submenuStyles = `
+.subm-rich {
+  width: 280px;
+  padding: 12px;
+  text-align: left;
+}
+
+.subm-item {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 13px !important;
+  border-radius: 13px !important;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  transition: background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.subm-item + .subm-item {
+  margin-top: 5px;
+}
+
+.subm-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--yellow), var(--navy));
+  transform: scaleY(0);
+  transform-origin: center;
+  transition: transform 220ms cubic-bezier(.4,0,.2,1);
+}
+
+.subm-item:hover,
+.subm-item:focus-visible {
+  background: var(--surface-hover) !important;
+  transform: translateX(4px);
+  box-shadow: 0 6px 16px rgba(16, 42, 78, .08);
+}
+
+[data-theme='dark'] .subm-item:hover,
+[data-theme='dark'] .subm-item:focus-visible {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+}
+
+.subm-item:hover::before,
+.subm-item:focus-visible::before {
+  transform: scaleY(1);
+}
+
+.subm-icon {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  color: var(--navy);
+  transition: background-color 200ms ease, color 200ms ease, transform 220ms cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.subm-item:hover .subm-icon,
+.subm-item:focus-visible .subm-icon {
+  background: linear-gradient(135deg, var(--navy-deep), var(--navy));
+  color: var(--yellow);
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.subm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.subm-title {
+  color: var(--text-primary) !important;
+  font-size: 14px !important;
+  font-weight: 750 !important;
+}
+
+.subm-desc {
+  color: var(--text-faint);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+@media (max-width: 760px) {
+  .subm-rich {
+    width: auto;
+  }
+  .subm-item {
+    padding: 11px 12px !important;
+  }
+  .subm-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+  }
+}
+`
 
 export default Header

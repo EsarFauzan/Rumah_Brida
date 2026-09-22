@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\NewsController;
 use App\Http\Controllers\ResearchProposalController;
+use App\Http\Controllers\InnovationController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:auth');
@@ -39,3 +40,13 @@ Route::middleware(['auth:sanctum', 'throttle:news-write'])->group(function () {
 
 Route::middleware('auth:sanctum')->get('/admin/research-proposals', [ResearchProposalController::class, 'adminIndex']);
 Route::middleware('auth:sanctum')->get('/admin/news', [NewsController::class, 'adminIndex']);
+
+Route::get('/innovations/options', [InnovationController::class, 'options']);
+Route::get('/innovations', [InnovationController::class, 'index']);
+Route::get('/innovations/{innovation}', [InnovationController::class, 'show']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/innovations', [InnovationController::class, 'store']);
+    Route::put('/innovations/{innovation}', [InnovationController::class, 'update']);
+    Route::delete('/innovations/{innovation}', [InnovationController::class, 'destroy']);
+});
