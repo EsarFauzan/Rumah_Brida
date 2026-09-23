@@ -26,10 +26,12 @@ class ResearchProposalController extends Controller
     {
         $validated = $request->validate([
             'status' => ['nullable', Rule::in(['draft', 'submitted', 'all'])],
+            'search' => ['nullable', 'string', 'max:255'],
             'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
         $status = $validated['status'] ?? 'submitted';
+        $search = trim($validated['search'] ?? '');
         $perPage = $validated['per_page'] ?? 10;
         $user = $request->user();
 
@@ -49,6 +51,11 @@ class ResearchProposalController extends Controller
                         ->orWhere('user_id', $user->id);
                 }),
             )
+            ->when($search !== '', fn ($query) => $query->where(function ($inner) use ($search) {
+                $inner->where('proposal_title', 'like', "%{$search}%")
+                    ->orWhere('researcher_name', 'like', "%{$search}%")
+                    ->orWhere('institution', 'like', "%{$search}%");
+            }))
             ->latest('submitted_at')
             ->latest('created_at')
             ->paginate($perPage)

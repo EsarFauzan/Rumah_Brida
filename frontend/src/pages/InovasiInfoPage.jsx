@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { storageUrl } from '../utils/fileUrl'
 import api from '../services/api'
 import useAuth from '../hooks/useAuth'
 import ConfirmModal from '../components/ConfirmModal'
+import Pagination from '../components/Pagination'
 
 function InovasiInfoPage() {
   const [innovations, setInnovations] = useState([])
@@ -12,29 +13,52 @@ function InovasiInfoPage() {
   const [pendingDelete, setPendingDelete] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [yearFilter, setYearFilter] = useState('all')
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState(null)
+  const [total, setTotal] = useState(0)
+  const [availableYears, setAvailableYears] = useState([])
+  const [reload, setReload] = useState(0)
   const { user, isAuthenticated } = useAuth()
 
-  const loadInnovations = () => {
-    setIsLoading(true)
-    setFeedback(null)
-
-    api.get('/innovations')
-      .then((response) => setInnovations(response.data.data.data ?? []))
-      .catch(() => setFeedback({ type: 'error', message: 'Gagal memuat data inovasi.' }))
-      .finally(() => setIsLoading(false))
-  }
-
   useEffect(() => {
-    loadInnovations()
-  }, [])
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => {
+      setIsLoading(true)
+      setFeedback(null)
+      api.get('/innovations', {
+        params: { page, search: searchTerm.trim() || undefined, year: yearFilter === 'all' ? undefined : yearFilter },
+        signal: controller.signal,
+      })
+        .then(({ data }) => {
+          if (controller.signal.aborted) return
+          if (page > data.data.last_page) {
+            setPage(data.data.last_page)
+            return
+          }
+          setInnovations(data.data.data)
+          setPagination(data.data)
+          setTotal(data.total)
+          setAvailableYears(data.years)
+        })
+        .catch(() => {
+          if (!controller.signal.aborted) {
+            setPagination(null)
+            setInnovations([])
+            setFeedback({ type: 'error', message: 'Gagal memuat data inovasi.' })
+          }
+        })
+        .finally(() => { if (!controller.signal.aborted) setIsLoading(false) })
+    }, 300)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [page, searchTerm, yearFilter, reload])
 
   const confirmDelete = async () => {
-    if (!pendingDelete) return
+    if (!pendingDelete || deletingId !== null) return
 
     setDeletingId(pendingDelete.id)
     try {
       await api.delete(`/innovations/${pendingDelete.id}`)
-      setInnovations((current) => current.filter((item) => item.id !== pendingDelete.id))
+      setReload((value) => value + 1)
       setPendingDelete(null)
     } catch (error) {
       if (error.response?.status === 403) {
@@ -47,22 +71,6 @@ function InovasiInfoPage() {
       setDeletingId(null)
     }
   }
-
-  const availableYears = useMemo(() => {
-    const years = new Set(innovations.map((item) => item.reporting_year))
-    return Array.from(years).sort((a, b) => b - a)
-  }, [innovations])
-
-  const filteredInnovations = useMemo(() => {
-    return innovations.filter((item) => {
-      const matchesSearch =
-        searchTerm.trim() === '' ||
-        item.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.innovator_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesYear = yearFilter === 'all' || String(item.reporting_year) === String(yearFilter)
-      return matchesSearch && matchesYear
-    })
-  }, [innovations, searchTerm, yearFilter])
 
   return (
     <section className="if-page">
@@ -78,7 +86,7 @@ function InovasiInfoPage() {
             <p>Jelajahi seluruh inovasi daerah yang telah tercatat dan terverifikasi.</p>
           </div>
           <div className="if-stat">
-            <div className="if-stat-value">{innovations.length}</div>
+            <div className="if-stat-value">{total}</div>
             <div className="if-stat-label">Total Inovasi</div>
           </div>
         </div>
@@ -87,7 +95,7 @@ function InovasiInfoPage() {
       <div className="if-container">
         {feedback && <div className={`form-feedback ${feedback.type}`} role="status">{feedback.message}</div>}
 
-        {!isLoading && innovations.length > 0 && (
+        {(
           <div className="if-toolbar">
             <div className="if-search">
               <SearchIcon />
@@ -95,16 +103,17 @@ function InovasiInfoPage() {
                 type="text"
                 placeholder="Cari judul atau nama inovator..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
+                aria-label="Cari judul atau nama inovator"
               />
               {searchTerm && (
-                <button type="button" className="if-search-clear" onClick={() => setSearchTerm('')}>
+                <button type="button" className="if-search-clear" aria-label="Hapus pencarian" onClick={() => { setSearchTerm(''); setPage(1) }}>
                   <XIcon />
                 </button>
               )}
             </div>
             <div className="if-year-select">
-              <select value={yearFilter} onChange={(e) => setYearFilter(e.target.value)}>
+              <select aria-label="Tahun pelaporan" value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1) }}>
                 <option value="all">Semua Tahun</option>
                 {availableYears.map((year) => (
                   <option key={year} value={year}>{year}</option>
@@ -116,95 +125,81 @@ function InovasiInfoPage() {
         )}
 
         {isLoading ? (
-          <div className="if-skeleton-grid">
+          <div className="if-table-loading" aria-label="Memuat data inovasi">
             {[1, 2, 3, 4].map((n) => (
-              <div className="if-skeleton-card" key={n} />
+              <div className="if-skeleton-row" key={n} />
             ))}
           </div>
-        ) : innovations.length === 0 ? (
+        ) : feedback ? null : total === 0 ? (
           <div className="if-empty">
             <div className="if-empty-icon"><EmptyIcon /></div>
             <h3>Belum Ada Data Inovasi</h3>
             <p>Data inovasi yang ditambahkan akan muncul di sini.</p>
           </div>
-        ) : filteredInnovations.length === 0 ? (
+        ) : innovations.length === 0 ? (
           <div className="if-empty">
             <div className="if-empty-icon"><SearchIcon size={32} /></div>
             <h3>Tidak Ditemukan</h3>
             <p>Coba ubah kata kunci pencarian atau filter tahun.</p>
           </div>
         ) : (
-          <div className="if-grid">
-            {filteredInnovations.map((item) => {
-              const isOwner = isAuthenticated && user?.id === item.user_id
-              return (
-                <article className="if-card" key={item.id}>
-                  <div className="if-card-top">
-                    <span className="if-badge-year">{item.reporting_year}</span>
-                    {isOwner && (
-                      <div className="if-card-actions">
-                        <a className="if-icon-btn" href={`/inovasi/edit/${item.id}`} title="Edit">
-                          <EditIcon />
-                        </a>
-                        <button
-                          type="button"
-                          className="if-icon-btn if-icon-btn-danger"
-                          onClick={() => setPendingDelete(item)}
-                          disabled={deletingId === item.id}
-                          title="Hapus"
-                        >
-                          {deletingId === item.id ? <span className="if-mini-spinner" /> : <TrashIcon />}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <h3 className="if-card-title">{item.title}</h3>
-
-                  <div className="if-card-innovator">
-                    <UserIcon />
-                    <span>{item.innovator_name}</span>
-                  </div>
-
-                  <span className="if-badge-type">{item.innovation_type}</span>
-
-                  <div className="if-card-affair">
-                    <BuildingIcon />
-                    <span>{item.government_affair}</span>
-                  </div>
-
-                  <div className="if-card-footer">
-                    {item.profile_pdf_path && (
-                      
-                      <a
-                        className="if-file-link"
-                        href={storageUrl(item.profile_pdf_path)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <FileIcon /> Profil
-                      </a>
-                    )}
-                    {item.report_pdf_path && (
-                      
-                      <a
-                        className="if-file-link"
-                        href={storageUrl(item.report_pdf_path)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <FileIcon /> Laporan
-                      </a>
-                    )}
-                    {!item.profile_pdf_path && !item.report_pdf_path && (
-                      <span className="if-file-empty">Tidak ada berkas</span>
-                    )}
-                  </div>
-                </article>
-              )
-            })}
+          <div className="if-table-wrap">
+            <table className="if-table">
+              <thead>
+                <tr>
+                  <th className="if-col-number" scope="col">NO</th>
+                  <th scope="col">Judul</th>
+                  <th scope="col">OPD</th>
+                  <th className="if-col-action" scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {innovations.map((item, index) => {
+                  const isOwner = isAuthenticated && user?.id === item.user_id
+                  const rowNumber = ((pagination?.current_page ?? 1) - 1) * (pagination?.per_page ?? 10) + index + 1
+                  return (
+                    <tr key={item.id}>
+                      <td className="if-cell-number">{rowNumber}</td>
+                      <td>
+                        <strong className="if-table-title">{item.title}</strong>
+                      </td>
+                      <td>
+                        <span className={item.regional_agency ? 'if-table-opd' : 'if-table-empty'}>
+                          {item.regional_agency || 'Belum diisi'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="if-table-actions">
+                          <InnovationFileAction path={item.profile_pdf_path} label="Profil" />
+                          <InnovationFileAction path={item.report_pdf_path} label="Laporan" />
+                          {isOwner && (
+                            <>
+                              <a className="if-icon-btn" href={`/inovasi/edit/${item.id}`} aria-label={`Edit ${item.title}`} title="Edit">
+                                <EditIcon />
+                              </a>
+                              <button
+                                type="button"
+                                className="if-icon-btn if-icon-btn-danger"
+                                onClick={() => setPendingDelete(item)}
+                                disabled={deletingId === item.id}
+                                aria-label={`Hapus ${item.title}`}
+                                title="Hapus"
+                              >
+                                {deletingId === item.id ? <span className="if-mini-spinner" /> : <TrashIcon />}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
+
+        {!isLoading && !feedback && <Pagination pagination={pagination} onPageChange={setPage} />}
       </div>
 
       <ConfirmModal
@@ -218,6 +213,22 @@ function InovasiInfoPage() {
         onCancel={() => setPendingDelete(null)}
       />
     </section>
+  )
+}
+
+function InnovationFileAction({ path, label }) {
+  if (!path) {
+    return (
+      <span className="if-file-link is-unavailable" aria-disabled="true" title={`${label} belum tersedia`}>
+        <FileIcon /> {label}
+      </span>
+    )
+  }
+
+  return (
+    <a className="if-file-link is-available" href={storageUrl(path)} target="_blank" rel="noopener noreferrer">
+      <FileIcon /> {label}
+    </a>
   )
 }
 
@@ -247,24 +258,6 @@ function TrashIcon() {
       <path d="M10 11v6" />
       <path d="M14 11v6" />
       <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  )
-}
-
-function UserIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="12" cy="8" r="3.6" />
-      <path d="M5 20c0-3.6 3.1-6 7-6s7 2.4 7 6" />
-    </svg>
-  )
-}
-
-function BuildingIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <rect x="4" y="4" width="16" height="17" rx="1.5" />
-      <path d="M8 8h1.5M8 12h1.5M8 16h1.5M14.5 8H16M14.5 12H16M14.5 16H16" />
     </svg>
   )
 }
@@ -357,35 +350,26 @@ const styles = `
 }
 .if-year-select svg { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--text-faint); pointer-events: none; }
 
-.if-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
-
-.if-card {
-  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px; padding: 22px;
-  box-shadow: 0 6px 18px rgba(16, 42, 78, 0.05); position: relative; overflow: hidden;
-  transition: transform 200ms cubic-bezier(.22,.8,.24,1), box-shadow 200ms ease, border-color 200ms ease;
+.if-table-wrap {
+  width: 100%; overflow-x: auto; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 12px; box-shadow: var(--shadow-card);
 }
-[data-theme='dark'] .if-card { box-shadow: 0 6px 18px rgba(0,0,0,.28); }
-.if-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, var(--yellow), var(--navy));
-  transform: scaleX(0); transform-origin: left; transition: transform 260ms ease;
+.if-table { width: 100%; min-width: 720px; border-collapse: collapse; table-layout: fixed; }
+.if-table th {
+  padding: 15px 18px; color: var(--text-secondary); background: var(--bg-soft); border-bottom: 1px solid var(--border-strong);
+  font-family: var(--font-display); font-size: 12px; font-weight: 800; text-align: left; text-transform: uppercase;
 }
-.if-card:hover { transform: translateY(-4px); border-color: var(--action-border); box-shadow: 0 18px 34px rgba(16,42,78,.12); }
-[data-theme='dark'] .if-card:hover { box-shadow: 0 18px 34px rgba(0,0,0,.45); }
-.if-card:hover::before { transform: scaleX(1); }
-
-.if-card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
-
-.if-badge-year {
-  display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 999px;
-  font-family: var(--font-display); font-size: 11px; font-weight: 800;
-  color: var(--accent-amber-deep); background: var(--amber-tint); border: 1px solid var(--amber-line);
-}
-
-.if-card-actions { display: flex; gap: 6px; opacity: 0; transform: translateY(-3px); transition: opacity 180ms ease, transform 180ms ease; }
-.if-card:hover .if-card-actions,
-.if-card:focus-within .if-card-actions { opacity: 1; transform: translateY(0); }
-@media (hover: none) { .if-card-actions { opacity: 1; transform: none; } }
+.if-table td { padding: 17px 18px; color: var(--text-secondary); border-bottom: 1px solid var(--border-soft); font-size: 13px; vertical-align: middle; }
+.if-table tbody tr:last-child td { border-bottom: 0; }
+.if-table tbody tr { transition: background-color 160ms ease; }
+.if-table tbody tr:hover { background: var(--surface-hover); }
+.if-col-number { width: 72px; text-align: center !important; }
+.if-col-action { width: 290px; }
+.if-cell-number { color: var(--navy) !important; font-family: var(--font-display); font-weight: 800; text-align: center; }
+.if-table-title { display: block; color: var(--navy-deep); font-family: var(--font-display); font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+.if-table-opd { color: var(--text-secondary); font-weight: 600; overflow-wrap: anywhere; }
+.if-table-empty { color: var(--text-faint); font-size: 12px; font-style: italic; }
+.if-table-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
 .if-icon-btn {
   width: 30px; height: 30px; display: inline-flex; align-items: center; justify-content: center;
@@ -399,24 +383,11 @@ const styles = `
 
 .if-mini-spinner { width: 12px; height: 12px; border: 2px solid var(--danger-line); border-top-color: var(--danger); border-radius: 50%; animation: if-spin .7s linear infinite; }
 
-.if-card-title { font-family: var(--font-display); font-size: 17px; font-weight: 750; color: var(--navy-deep); margin: 0 0 10px; line-height: 1.35; }
-
-.if-card-innovator { display: flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 12.5px; font-weight: 600; margin-bottom: 12px; }
-.if-card-innovator svg { color: var(--text-faint); flex: none; }
-
-.if-badge-type {
-  display: inline-flex; padding: 4px 11px; border-radius: 999px; font-size: 10.5px; font-weight: 800; text-transform: uppercase;
-  color: var(--info); background: var(--info-bg); border: 1px solid var(--info-line); margin-bottom: 12px;
-}
-
-.if-card-affair { display: flex; align-items: center; gap: 7px; color: var(--text-faint); font-size: 12px; margin-bottom: 16px; }
-.if-card-affair svg { flex: none; }
-
-.if-card-footer { display: flex; gap: 14px; flex-wrap: wrap; padding-top: 14px; border-top: 1px dashed var(--border-soft); }
-
-.if-file-link { display: inline-flex; align-items: center; gap: 6px; color: var(--navy); font-size: 12px; font-weight: 700; text-decoration: none; }
-.if-file-link:hover { color: var(--link-hover); text-decoration: underline; }
-.if-file-empty { color: var(--text-faint); font-size: 12px; font-style: italic; }
+.if-file-link { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px; color: var(--navy); background: var(--bg-soft); border: 1px solid var(--action-border); border-radius: 8px; font-size: 11px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.if-file-link.is-available { transition: color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; }
+.if-file-link.is-available:hover,
+.if-file-link.is-available:focus-visible { color: var(--navy-deep); background: linear-gradient(135deg, var(--yellow), color-mix(in srgb, var(--yellow) 72%, #fff)); border-color: var(--yellow); box-shadow: 0 6px 16px color-mix(in srgb, var(--yellow) 32%, transparent); outline: none; transform: translateY(-1px); }
+.if-file-link.is-unavailable { color: var(--text-faint); background: var(--bg-soft); border-color: var(--border-input); cursor: not-allowed; opacity: .78; }
 
 .if-empty {
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 70px 20px; text-align: center;
@@ -429,9 +400,9 @@ const styles = `
 .if-empty h3 { margin: 0; color: var(--text-secondary); font-size: 16px; }
 .if-empty p { margin: 0; font-size: 13px; }
 
-.if-skeleton-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
-.if-skeleton-card {
-  height: 210px; border-radius: 14px;
+.if-table-loading { display: grid; gap: 1px; overflow: hidden; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--border-soft); }
+.if-skeleton-row {
+  height: 68px;
   background: linear-gradient(90deg, var(--surface-hover) 25%, var(--border-soft) 37%, var(--surface-hover) 63%);
   background-size: 400% 100%; animation: if-shimmer 1.4s ease infinite;
 }
@@ -440,16 +411,17 @@ const styles = `
 @keyframes if-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .if-card { transition-duration: 1ms; }
-  .if-card:hover { transform: none; }
-  .if-card-actions { opacity: 1; transform: none; }
-  .if-skeleton-card { animation-duration: 1600ms; }
+  .if-table tbody tr { transition-duration: 1ms; }
+  .if-file-link.is-available { transition-duration: 1ms; }
+  .if-file-link.is-available:hover,
+  .if-file-link.is-available:focus-visible { transform: none; }
+  .if-skeleton-row { animation-duration: 1600ms; }
 }
 
 @media (max-width: 860px) {
   .if-hero { padding: 26px 20px 32px; }
   .if-container { padding: 0 20px; }
-  .if-grid, .if-skeleton-grid { grid-template-columns: 1fr; }
+  .if-table th, .if-table td { padding: 14px; }
 }
 `
 

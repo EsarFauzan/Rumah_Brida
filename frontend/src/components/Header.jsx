@@ -10,6 +10,7 @@ import {
   Info,
   Microscope,
   FileCheck2,
+  UsersRound,
 } from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo-fix.webp'
 import logoRumahBridaDark from '../assets/image/logo-fix-dark.png'
@@ -38,7 +39,14 @@ const menuItems = [
       { label: 'Info', href: '/inovasi/info', desc: 'Jelajahi data inovasi', icon: Info },
     ],
   },
-  { label: 'Info Publik', href: '/info-publik' },
+  {
+    label: 'Info Publik',
+    href: '/info-publik/peneliti',
+    submenu: [
+      { label: 'Info Peneliti', href: '/info-publik/peneliti', desc: 'Data inovasi dan dokumen publik', icon: UsersRound },
+      { label: 'Hasil Riset', href: '/info-publik/hasil-riset', desc: 'Daftar proposal riset yang dikirim', icon: Microscope },
+    ],
+  },
   { label: 'Lomba', href: '#lomba', submenu: [] },
   { label: 'Lapor!', href: 'https://sp4n.lapor.go.id/', external: true },
 ]

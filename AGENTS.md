@@ -16,9 +16,12 @@ Fitur yang sudah tersedia:
 - Daftar hasil/proposal yang sudah dikirim.
 - Detail, edit, lihat PDF, dan hapus proposal (hanya oleh pemilik). Hapus
   dikonfirmasi lewat dialog in-app, bukan `window.confirm()`.
+- Info Publik berupa tabel inovasi dan tautan dokumen publik.
 - Tampilan responsif desktop dan mobile.
 
-Menu `Inovasi`, `Lomba`, dan `Lapor` belum memiliki fitur lengkap.
+Inovasi sudah memiliki form tambah/edit, daftar publik, dan API database.
+Menu `Lomba` belum memiliki halaman khusus. `Lapor!` membuka
+SP4N LAPOR di tab baru, bukan formulir internal.
 
 ## 2. Teknologi
 
@@ -67,6 +70,10 @@ frontend/
   src/pages/ResearchProposalPage.jsx  Form tambah dan edit proposal
   src/pages/ResearchResultsPage.jsx   Daftar proposal submitted
   src/pages/ResearchProposalDetailPage.jsx
+  src/pages/InovasiInputPage.jsx      Form tambah dan edit inovasi
+  src/pages/InovasiInfoPage.jsx       Daftar inovasi dengan aksi pemilik
+  src/pages/PublicInformationPage.jsx Tabel publik inovasi dan dokumennya
+  src/pages/PublicResearchResultsPage.jsx Tabel publik hasil riset read-only
   src/services/api.js                 Axios base URL dan interceptor token
   src/services/authStore.js           Penyimpanan token di sessionStorage
   src/services/themeStore.js          Tema light/dark: persistensi + listener
@@ -116,6 +123,12 @@ backend/
 | `/riset/proposal/{id}/edit` | Edit proposal |
 | `/admin/proposal` | Dashboard verifikasi proposal, khusus admin |
 | `/admin/berita` | Kelola berita, khusus admin |
+| `/inovasi/input` | Form inovasi baru, wajib login untuk mengirim |
+| `/inovasi/info` | Daftar inovasi publik |
+| `/inovasi/edit/{id}` | Form edit inovasi; API membatasi perubahan ke pemilik |
+| `/info-publik` | Alias halaman Info Peneliti |
+| `/info-publik/peneliti` | Tabel publik inovasi, OPD, file profil, dan laporan |
+| `/info-publik/hasil-riset` | Tabel publik hasil riset dan berkas pelaporan |
 
 Routing belum memakai React Router. `App.jsx` membaca `window.location.pathname`
 dan mendengarkan event `popstate`. Jika menambah halaman, tambahkan kondisi di
@@ -211,9 +224,9 @@ shadow. Divider tipis sebelum area akun berjarak 16px dari tombol; fokus
 keyboard tetap memakai outline kuning. Jangan mengubah link `/masuk` atau logic
 `closeAll()`.
 
-`Lapor!` adalah item navigasi setelah `Lomba`, bukan tombol terpisah. Gunakan
-href `/#lapor` agar hash selalu kembali ke Beranda dari route lain; indikator
-aktifnya mengikuti item navigasi lain lewat `getActiveMenu()`.
+`Lapor!` adalah item navigasi setelah `Lomba`, bukan tombol terpisah. Link
+mengarah ke `https://sp4n.lapor.go.id/` dengan `target="_blank"` dan
+`rel="noopener noreferrer"`. Klik link eksternal ini tidak mengubah menu aktif.
 
 ### Theme toggle (light/dark)
 
@@ -294,7 +307,7 @@ http://127.0.0.1:8000/api
 
 | Method | Endpoint | Auth | Fungsi |
 |---|---|---|---|
-| GET | `/api/research-proposals?status=submitted&page=1&per_page=10` | publik | Daftar proposal terkirim, paginated |
+| GET | `/api/research-proposals?status=submitted&page=1&per_page=10&search=...` | publik | Daftar proposal terkirim, paginated; pencarian opsional |
 | GET | `/api/research-proposals?status=draft&page=1` | wajib pemilik | Daftar draft milik sendiri, paginated |
 | GET | `/api/research-proposals?status=all` | opsional | Submitted plus draft milik sendiri, paginated |
 | GET | `/api/research-proposals/{id}` | opsional | Detail; draft hanya untuk pemilik |
@@ -733,8 +746,8 @@ php artisan storage:link
 php artisan serve --host=127.0.0.1 --port=8000
 ```
 
-`storage:link` tidak lagi dibutuhkan untuk PDF proposal karena file itu ada di
-disk privat, tetapi symlink tetap dibuat untuk aset publik lain di masa depan.
+`storage:link` tidak dibutuhkan untuk PDF proposal riset yang privat, tetapi
+dibutuhkan untuk gambar berita dan PDF inovasi yang berada di disk `public`.
 
 Frontend, terminal kedua:
 
@@ -800,12 +813,209 @@ dashboard verifikasi admin, dialog konfirmasi hapus proposal dan berita, serta
 berita dari database dengan kelola berita admin sudah tersedia. Sisa prioritas, diurutkan
 dari yang paling murah dan paling mendesak:
 
-1. Bangun submenu serta halaman Inovasi dan Lomba; perbaiki juga href menu
-   Inovasi/Lomba di `Header.jsx` yang belum memakai garis miring di depan,
-   sehingga dari route `/riset/...` link itu hanya menambah hash pada halaman
-   yang sedang dibuka.
-2. Bangun formulir dan alur menu Lapor.
-3. Pertimbangkan React Router agar navigasi internal tidak memuat ulang halaman.
+1. Perbaiki lint lama pada `InovasiInputPage.jsx` (variabel tidak dipakai,
+   setState langsung dalam effect, serta komponen didefinisikan saat render).
+   Pagination dan pencarian/filter server-side daftar Inovasi sudah tersedia;
+   lanjutkan cakupan test untuk tambah/edit/hapus dan upload PDF Inovasi.
+2. Bangun halaman Lomba. Link Lomba masih `#lomba`, sehingga dari subhalaman
+   hanya mengubah hash halaman tersebut.
+3. Lapor sudah diarahkan ke SP4N LAPOR; formulir internal bukan fitur yang
+   tersedia saat ini. Pertimbangkan React Router untuk navigasi internal.
+
+## 12B. Pembaruan Pull 23 September 2026
+
+Halaman Hasil Riset (`/riset/hasil`) kini mengikuti visual Info Inovasi: hero
+navy dengan breadcrumb dan kartu total, toolbar pencarian serta tombol Ajukan
+Proposal, loading skeleton, state kosong, dan tabel empat kolom (No, Judul
+Proposal, Peneliti & Institusi, Action). Pencarian server-side dengan debounce
+300ms mencakup judul, peneliti, dan institusi. Nomor baris mengikuti posisi
+global pagination. Tombol Detail telah dihapus. Action berisi tombol PDF,
+sedangkan Edit dan Hapus hanya tampil untuk pemilik (`can_manage`) sebagai
+tombol ikon 30px dengan tooltip. Hapus tetap memakai `DeleteProposalModal` dan
+memuat ulang daftar agar total serta pagination tetap akurat. PDF tanpa berkas
+tetap terlihat dalam keadaan disabled. Tabel dapat digeser horizontal pada
+viewport sempit; halaman Draft Saya dan dashboard Admin tidak diubah menjadi
+tabel.
+
+Menu Info Publik kini berupa submenu berbasis klik: Info Peneliti mengarah ke
+`/info-publik/peneliti`, sedangkan Hasil Riset mengarah ke
+`/info-publik/hasil-riset`. Route kedua merender
+`PublicResearchResultsPage.jsx`, halaman publik read-only dengan visual yang
+sama seperti Info Peneliti: hero navy, kicker Rumah BRIDA, kartu total, toolbar
+pencarian, tabel putih, loading/state kosong, pagination, dark mode, dan
+horizontal scroll di mobile. Pencarian ditunda 300ms dan dikirim ke server,
+mencakup judul proposal, nama peneliti, serta institusi; mengganti kata pencarian
+mereset daftar ke halaman pertama. Tabelnya berisi No, Judul Proposal, Peneliti
+& Institusi, dan Berkas Pelaporan. Tidak ada tombol Ajukan Proposal, Detail,
+Edit, atau Hapus. Satu-satunya aksi adalah membuka `pdf_url` proposal melalui
+tombol Lihat berkas; bila PDF tidak tersedia, sel menampilkan Belum tersedia.
+`pdf_url` merupakan URL bertanda tangan yang sudah absolut, sedangkan file
+inovasi merupakan path storage relatif, sehingga `PublicFileLink` menangani
+kedua format tersebut. `/info-publik` tetap menjadi alias Info Peneliti.
+`PublicInformationPage.jsx` mengambil endpoint
+publik `GET /api/innovations` dan menampilkan tabel lima kolom: No, Judul
+Inovasi, OPD, File Publik, dan File Laporan. File Publik memetakan
+`profile_pdf_path`, sedangkan File Laporan memetakan `report_pdf_path`; tautan
+dibentuk oleh `storageUrl()` dan dibuka di tab baru. File yang tidak ada
+menampilkan "Belum tersedia", sedangkan OPD kosong menampilkan "Belum diisi".
+Nomor baris mengikuti posisi global pagination. Halaman menyediakan pencarian
+judul, filter tahun, pagination 10 data, loading skeleton, state kosong/error,
+tema light/dark, dan horizontal scroll untuk tabel pada layar sempit. Halaman
+ini hanya membaca data publik dan tidak menyediakan edit/hapus.
+
+Halaman Info Inovasi kini menampilkan hasil Input Inovasi sebagai tabel empat
+kolom: NO, Judul, OPD, dan Action. NO mengikuti posisi global pagination (bukan
+dimulai ulang dari 1 pada setiap halaman). OPD membaca `regional_agency`; record
+lama yang belum memiliki nilai menampilkan "Belum diisi". Action memuat tautan
+Profil dan Laporan pada setiap baris, termasuk saat PDF belum diunggah. Tombol
+file yang tersedia dapat dibuka dan memakai gaya netral saat diam; gradasi
+kuning hanya muncul saat hover atau fokus keyboard. Tombol tanpa file tetap
+netral tanpa efek kuning, memakai `aria-disabled`, dan tidak dapat diklik.
+Tombol Edit/Hapus tetap hanya tersedia untuk pemilik.
+Tabel memiliki header semantik, hover baris, loading skeleton berbentuk baris,
+dan horizontal scroll pada layar sempit. Pagination, pencarian, filter tahun,
+otorisasi edit/hapus, serta dialog konfirmasi tetap digunakan.
+
+Form tambah/edit Proposal Riset juga memakai header bagian rata tengah:
+Informasi Peneliti, Institusi & Lokasi, Isi Proposal, dan Berkas Proposal.
+Aturan `.riset-section-head` menyamakan alignment nomor dan judul dengan header
+bagian Input Inovasi. Empat teks deskripsi di bawah judul bagian
+Proposal Riset sudah dihapus sehingga header hanya memuat nomor dan judul.
+Susunan field dan logika form tetap sama.
+Build frontend berhasil setelah perubahan CSS ini.
+
+Judul bagian form Input/Edit Inovasi (Informasi Utama, Bentuk Inovasi,
+Timeline, Berkas Pendukung) beserta nomor bagian kini rata tengah dalam
+masing-masing section. Aturan `.inovasi-section-head` di `App.css` memakai
+`justify-content: center`, `align-items: center`, dan `text-align: center`.
+Label/input dan navigasi samping tetap mengikuti tata letak yang sudah ada.
+
+Pembaruan Bentuk Inovasi: judul bagian kedua dan navigasi samping yang semula
+Klasifikasi kini menjadi Bentuk Inovasi (id internal `klasifikasi` tetap).
+Input Perangkat Daerah ditambahkan setelah dua pilihan yang sudah ada.
+Field API/database `regional_agency` berupa teks opsional maksimal 255 karakter,
+ditampilkan kembali saat edit dan dapat dikosongkan menjadi NULL. Field ikut
+dalam metadata kelengkapan bagian. Tidak memakai daftar instansi hardcoded.
+Migration `2026_09_23_000001_add_regional_agency_to_innovations_table` sudah
+diterapkan di MySQL lokal tanpa mengubah data lama. Verifikasi: build frontend,
+Pint file terkait, dan 49 test backend/234 asersi lulus. Test mencakup tambah,
+baca, edit, kosongkan, field opsional, dan batas panjang Perangkat Daerah.
+Lint form masih menemukan masalah lama (unused variable, effect, komponen
+dalam render); belum ada verifikasi visual browser untuk penambahan ini.
+
+Pembaruan form Input/Edit Inovasi: bagian Informasi Utama kini berisi Judul,
+Inovator, Nomor Registrasi, dan Tahun Pelaporan. Tahun Pelaporan dipindahkan
+dari Timeline; metadata navigasi bagian dan perhitungan kelengkapan mengikuti
+susunan baru. Grid yang sudah ada tetap dua kolom desktop dan satu kolom mobile.
+Nomor Registrasi memakai `registration_number`, teks opsional maksimal 255
+karakter (bukan angka/nomor otomatis dan belum dibatasi unik), sehingga huruf,
+garis miring, serta nol di depan tetap tersimpan. Nilai dimuat kembali saat
+edit; frontend mengirim string kosong jika dikosongkan agar backend menyimpan
+NULL, bukan mempertahankan nilai lama. Ikon input baru memakai lucide-react.
+Model dan validasi API sudah mendukung field ini. Migration
+`2026_09_23_000000_add_registration_number_to_innovations_table` menambah kolom
+nullable tanpa mengubah record lama dan sudah diterapkan pada MySQL lokal.
+Verifikasi: build frontend dan Pint file terkait lulus; 48 test backend dengan
+221 asersi lulus, termasuk simpan/baca/edit/kosongkan nomor, nomor opsional,
+dan batas panjang. Lint form masih melaporkan masalah lama yang tercatat pada
+bagian 12; pengujian visual browser belum dilakukan untuk perubahan ini.
+
+Pembaruan lokal setelah pull: daftar Inovasi kini memakai `Pagination.jsx`
+dengan 10 record per halaman. API menerima `search` (judul atau inovator),
+`year`, dan `page`; filter diterapkan sebelum pagination di database. Urutan
+terbaru memakai `created_at` lalu `id` agar stabil. Respons mempertahankan
+paginator di `data`, serta menambah `total` seluruh record dan `years` seluruh
+tahun yang tersedia. `data.total` adalah jumlah hasil setelah filter.
+Frontend menunda request 300ms, membatalkan request lama, mereset halaman saat
+filter berubah, dan memuat ulang data setelah hapus. Jika halaman terakhir
+menjadi kosong, frontend kembali ke halaman terakhir yang masih tersedia.
+Toolbar tetap tersedia ketika hasil kosong.
+
+Verifikasi pembaruan pagination: 47 test backend/207 asersi lulus, termasuk
+`InnovationApiTest` (2 test/32 asersi untuk pagination, pencarian judul/inovator,
+filter gabungan, metadata global, data kosong, dan validasi parameter).
+Pint file backend yang diubah dan lint `InovasiInfoPage.jsx` lulus; build
+frontend berhasil. Lint keseluruhan masih gagal pada `InovasiInputPage.jsx`
+yang belum diubah. Pengujian browser belum dilakukan.
+Setelah MySQL lokal diaktifkan, `php artisan migrate` berhasil menerapkan
+`2026_09_15_000000_create_innovations_table` pada 23 September 2026 (batch 6).
+Pemeriksaan ulang `php artisan migrate:status` menunjukkan seluruh migration
+berstatus Ran, tanpa pending. Tidak menjalankan reset/fresh atau menghapus
+data lama. Test otomatis tetap memakai SQLite memory, bukan database pengguna.
+
+Catatan ini berdasarkan pembacaan diff `02ff476..6238d36` (17 file berubah).
+Pembaruan dokumentasi ini tidak menjalankan build, test, atau migration dan
+tidak membuktikan fitur baru sudah teruji di browser. Catatan verifikasi lama
+di atas berlaku untuk versi sebelum commit ini.
+
+### Inovasi: file dan alur
+
+- Frontend baru: `src/pages/InovasiInputPage.jsx`,
+  `src/pages/InovasiInfoPage.jsx`, `src/components/ConfirmModal.jsx`, dan
+  `src/utils/fileUrl.js`. Route didaftarkan di `src/App.jsx`.
+- Backend baru: `app/Http/Controllers/InnovationController.php`,
+  `app/Models/Innovation.php`, serta migration
+  `database/migrations/2026_09_15_000000_create_innovations_table.php`.
+- Tabel `innovations` memuat pemilik `user_id`, `title`, `innovator_name`,
+  `innovation_type`, `government_affair`, `trial_date`, `implementation_date`,
+  `ratification_date`, `reporting_year`, path/nama asli PDF profil dan laporan,
+  serta timestamps. Foreign key user memakai `cascadeOnDelete`.
+- Form dibagi menjadi informasi utama, klasifikasi, tanggal/tahun, dan berkas.
+  Ada navigasi bagian, indikator kelengkapan, serta upload drag-and-drop.
+  Judul, inovator, klasifikasi, dan tahun wajib; tanggal dan PDF opsional.
+  Tahun divalidasi 2000-2100, setiap PDF maksimal 10 MB.
+- Daftar publik menampilkan kartu inovasi, pencarian judul/nama inovator,
+  filter tahun, dan link PDF. Pemilik mendapat tombol edit/hapus; hapus memakai
+  `ConfirmModal` baru yang terpisah dari `DeleteItemModal` lama.
+- Belum ada status draft maupun alur verifikasi admin untuk Inovasi.
+  Teks halaman menyebut "terverifikasi", tetapi tidak ada kolom atau proses
+  verifikasi di model, migration, dan controller saat ini.
+
+| Method | Endpoint | Akses dan fungsi |
+|---|---|---|
+| GET | `/api/innovations/options` | Publik, opsi klasifikasi |
+| GET | `/api/innovations` | Publik, daftar terbaru, 10 record per halaman |
+| GET | `/api/innovations/{id}` | Publik, detail |
+| POST | `/api/innovations` | Login, tambah milik akun aktif |
+| PUT | `/api/innovations/{id}` | Pemilik, edit |
+| DELETE | `/api/innovations/{id}` | Pemilik, hapus record dan kedua PDF |
+
+Respons daftar memiliki paginator Laravel di `data`; array record dibaca
+frontend melalui `response.data.data.data`. Edit mengirim POST multipart dengan
+`_method=PUT`. Pemeriksaan pemilik berada langsung di controller, belum memakai
+policy khusus Inovasi. Route tulis memakai `auth:sanctum`; belum ada limiter
+tulis khusus Inovasi selain limiter API global.
+
+PDF inovasi disimpan di disk `public`, folder `innovations/profile` dan
+`innovations/report`; berbeda dari PDF proposal riset yang privat. Berkas lama
+dihapus saat diganti. `storageUrl()` menyusun URL `/storage/...` memakai origin
+backend dari `VITE_API_URL` (fallback `http://127.0.0.1:8000/api`). File-file
+ini dapat dibuka publik dan memerlukan `php artisan storage:link`.
+Jalankan `php artisan migrate` bila migration baru belum diterapkan.
+`backend/.env.example` kini memakai `DB_DATABASE=rumah_brida` (huruf kecil);
+file `.env` lokal tidak diubah otomatis oleh pull.
+
+### Perubahan tampilan
+
+- Navbar: Inovasi memiliki submenu Input Inovasi dan Info. Submenu Riset dan
+  Inovasi menampilkan ikon, deskripsi, dan animasi hover. Sebagian style submenu
+  ditulis dalam `submenuStyles` di `Header.jsx`, selain aturan di `App.css`.
+  Menu aktif mengenali route `/inovasi/...` dan `/info-publik`.
+- Dark mode: navbar memakai aset baru `src/assets/image/logo-fix-dark.png`
+  saat tema gelap, sedangkan light tetap memakai `logo-fix.webp`.
+- Hero: judul menjadi "Selamat Datang" lalu "di Rumah Brida". Paragraf lama
+  diganti garis kuning dan tagline "Rumah Berani Riset dan Inovasi Daerah".
+- Berita: kartu memiliki badge kategori pada gambar, label Berita & Publikasi,
+  ikon Newspaper, tombol baca dengan ArrowRight, zoom gambar saat hover,
+  radius 20px, dan tombol slider bulat glass. Pratinjau samping tetap ada.
+  Desain ini tidak memiliki panel tanggal diagonal dari pekerjaan lokal lama.
+- Login/registrasi: layout baru dengan panel pengantar, ikon input, serta
+  tombol tampil/sembunyikan password dan konfirmasi password.
+- Proposal riset: form dibagi menjadi empat bagian bernomor (peneliti,
+  institusi/lokasi, isi proposal, berkas), dengan ikon, penghitung kata,
+  drag-and-drop PDF, dan tampilan file terpilih. Ajakan login juga didesain ulang.
+- `App.css` menambah aturan responsif, termasuk breakpoint >=1600px untuk
+  container, heading hero, logo, dan tinggi header.
 
 ## 13. Alur Kerja Git
 

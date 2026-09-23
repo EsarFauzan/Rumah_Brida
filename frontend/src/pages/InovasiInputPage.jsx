@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
+import { Hash, CalendarDays, Building2 } from 'lucide-react'
 import api from '../services/api'
 import useAuth from '../hooks/useAuth'
 
 const initialForm = {
   title: '',
   innovator_name: '',
+  registration_number: '',
   innovation_type: '',
   government_affair: '',
+  regional_agency: '',
   trial_date: '',
   implementation_date: '',
   ratification_date: '',
@@ -16,9 +19,9 @@ const initialForm = {
 }
 
 const SECTIONS = [
-  { id: 'info', title: 'Informasi Utama', desc: 'Judul & inovator', fields: ['title', 'innovator_name'] },
-  { id: 'klasifikasi', title: 'Klasifikasi', desc: 'Bentuk & urusan', fields: ['innovation_type', 'government_affair'] },
-  { id: 'timeline', title: 'Timeline', desc: 'Tanggal & tahun', fields: ['trial_date', 'implementation_date', 'ratification_date', 'reporting_year'] },
+  { id: 'info', title: 'Informasi Utama', desc: 'Identitas & pelaporan', fields: ['title', 'innovator_name', 'registration_number', 'reporting_year'] },
+  { id: 'klasifikasi', title: 'Bentuk Inovasi', desc: 'Bentuk, urusan & perangkat daerah', fields: ['innovation_type', 'government_affair', 'regional_agency'] },
+  { id: 'timeline', title: 'Timeline', desc: 'Tanggal kegiatan', fields: ['trial_date', 'implementation_date', 'ratification_date'] },
   { id: 'berkas', title: 'Berkas', desc: 'Dokumen pendukung', fields: ['profile_pdf', 'report_pdf'] },
 ]
 
@@ -55,8 +58,10 @@ function InovasiInputPage({ innovationId }) {
         setForm({
           title: data.title ?? '',
           innovator_name: data.innovator_name ?? '',
+          registration_number: data.registration_number ?? '',
           innovation_type: data.innovation_type ?? '',
           government_affair: data.government_affair ?? '',
+          regional_agency: data.regional_agency ?? '',
           trial_date: data.trial_date ? data.trial_date.slice(0, 10) : '',
           implementation_date: data.implementation_date ? data.implementation_date.slice(0, 10) : '',
           ratification_date: data.ratification_date ? data.ratification_date.slice(0, 10) : '',
@@ -133,7 +138,7 @@ function InovasiInputPage({ innovationId }) {
 
     const payload = new FormData()
     Object.entries(form).forEach(([key, value]) => {
-      if (value !== null && value !== '') payload.append(key, value)
+      if (['registration_number', 'regional_agency'].includes(key) || (value !== null && value !== '')) payload.append(key, value)
     })
     if (isEditMode) payload.append('_method', 'PUT')
 
@@ -186,9 +191,6 @@ function InovasiInputPage({ innovationId }) {
   )
   const IconCalendar = () => (
     <svg className="inovasi-icon" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
-  )
-  const IconHash = () => (
-  <svg className="inovasi-icon" viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="16" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M3.5 9.5h17M8 3v4M16 3v4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
   )
   const IconChevron = () => (
     <svg className="inovasi-chevron" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -362,6 +364,22 @@ function InovasiInputPage({ innovationId }) {
                   </div>
                   {errors.innovator_name && <small className="field-error">{errors.innovator_name}</small>}
                 </label>
+
+                <label className="inovasi-field">Nomor Registrasi
+                  <div className="inovasi-input-wrap">
+                    <Hash className="inovasi-icon" strokeWidth={1.8} aria-hidden="true" />
+                    <input type="text" name="registration_number" value={form.registration_number} onChange={updateField} maxLength={255} placeholder="Nomor registrasi (opsional)" />
+                  </div>
+                  {errors.registration_number && <small className="field-error">{errors.registration_number}</small>}
+                </label>
+
+                <label className="inovasi-field">Tahun Pelaporan
+                  <div className="inovasi-input-wrap">
+                    <CalendarDays className="inovasi-icon" strokeWidth={1.8} aria-hidden="true" />
+                    <input type="number" name="reporting_year" value={form.reporting_year} onChange={updateField} min="2000" max="2100" />
+                  </div>
+                  {errors.reporting_year && <small className="field-error">{errors.reporting_year}</small>}
+                </label>
               </div>
             </div>
 
@@ -369,7 +387,7 @@ function InovasiInputPage({ innovationId }) {
               <div className="inovasi-section-head">
                 <div className="inovasi-section-num">2</div>
                 <div>
-                  <h3>Klasifikasi</h3>
+                  <h3>Bentuk Inovasi</h3>
                 
                 </div>
               </div>
@@ -400,6 +418,14 @@ function InovasiInputPage({ innovationId }) {
                     <IconChevron />
                   </div>
                   {errors.government_affair && <small className="field-error">{errors.government_affair}</small>}
+                </label>
+
+                <label className="inovasi-field">Perangkat Daerah
+                  <div className="inovasi-input-wrap">
+                    <Building2 className="inovasi-icon" strokeWidth={1.8} aria-hidden="true" />
+                    <input type="text" name="regional_agency" value={form.regional_agency} onChange={updateField} maxLength={255} placeholder="Nama perangkat daerah (opsional)" />
+                  </div>
+                  {errors.regional_agency && <small className="field-error">{errors.regional_agency}</small>}
                 </label>
               </div>
             </div>
@@ -467,13 +493,6 @@ function InovasiInputPage({ innovationId }) {
                   {errors.ratification_date && <small className="field-error">{errors.ratification_date}</small>}
                 </label>
 
-                <label className="inovasi-field">Tahun Pelaporan
-                  <div className="inovasi-input-wrap">
-                    <IconHash />
-                    <input type="number" name="reporting_year" value={form.reporting_year} onChange={updateField} min="2000" max="2100" />
-                  </div>
-                  {errors.reporting_year && <small className="field-error">{errors.reporting_year}</small>}
-                </label>
               </div>
             </div>
 

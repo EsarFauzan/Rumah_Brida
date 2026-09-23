@@ -211,7 +211,6 @@ function ResearchProposalPage({ proposalId = null }) {
                   <div className="riset-section-num">1</div>
                   <div>
                     <h3>Informasi Peneliti</h3>
-                    <p>Data diri peneliti dan judul proposal riset</p>
                   </div>
                 </div>
                 <div className="riset-grid2">
@@ -237,7 +236,6 @@ function ResearchProposalPage({ proposalId = null }) {
                   <div className="riset-section-num">2</div>
                   <div>
                     <h3>Institusi &amp; Lokasi</h3>
-                    <p>Asal institusi dan titik koordinat penelitian</p>
                   </div>
                 </div>
                 <div className="riset-grid2">
@@ -271,7 +269,6 @@ function ResearchProposalPage({ proposalId = null }) {
                   <div className="riset-section-num">3</div>
                   <div>
                     <h3>Isi Proposal</h3>
-                    <p>Uraikan pendahuluan, rancang bangun, dan hasil yang dituju</p>
                   </div>
                 </div>
                 <div className="riset-chapters">
@@ -299,7 +296,6 @@ function ResearchProposalPage({ proposalId = null }) {
                   <div className="riset-section-num">4</div>
                   <div>
                     <h3>Berkas Proposal</h3>
-                    <p>Unggah dokumen proposal lengkap dalam format PDF</p>
                   </div>
                 </div>
 

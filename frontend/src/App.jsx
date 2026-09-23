@@ -13,6 +13,8 @@ import AdminNewsPage from './pages/AdminNewsPage'
 import Footer from './components/Footer'
 import InovasiInputPage from './pages/InovasiInputPage'
 import InovasiInfoPage from './pages/InovasiInfoPage'
+import PublicInformationPage from './pages/PublicInformationPage'
+import PublicResearchResultsPage from './pages/PublicResearchResultsPage'
 import './App.css'
 
 function App() {
@@ -75,6 +77,14 @@ function App() {
 
     if (pathname === '/inovasi/info') {
       return <InovasiInfoPage />
+    }
+
+    if (pathname === '/info-publik' || pathname === '/info-publik/peneliti') {
+      return <PublicInformationPage />
+    }
+
+    if (pathname === '/info-publik/hasil-riset') {
+      return <PublicResearchResultsPage />
     }
 
     return (

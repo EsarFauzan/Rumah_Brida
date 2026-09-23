@@ -35,10 +35,27 @@ class InnovationController extends Controller
 
     public function index(Request $request)
     {
-        $query = Innovation::query()->with('user:id,name')->latest();
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'year' => ['nullable', 'integer', 'min:2000', 'max:2100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $query = Innovation::query()->with('user:id,name')->latest()->orderByDesc('id');
+        $search = trim($filters['search'] ?? '');
+        if ($search !== '') {
+            $query->where(function ($query) use ($search) {
+                $query->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('innovator_name', 'like', '%'.$search.'%');
+            });
+        }
+        if (! empty($filters['year'])) {
+            $query->where('reporting_year', $filters['year']);
+        }
 
         return response()->json([
-            'data' => $query->paginate(10),
+            'data' => $query->paginate(10)->withQueryString(),
+            'total' => Innovation::count(),
+            'years' => Innovation::query()->distinct()->orderByDesc('reporting_year')->pluck('reporting_year'),
         ]);
     }
 
@@ -130,8 +147,10 @@ class InnovationController extends Controller
         return $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'innovator_name' => ['required', 'string', 'max:255'],
+            'registration_number' => ['nullable', 'string', 'max:255'],
             'innovation_type' => ['required', Rule::in(self::INNOVATION_TYPES)],
             'government_affair' => ['required', Rule::in(self::GOVERNMENT_AFFAIRS)],
+            'regional_agency' => ['nullable', 'string', 'max:255'],
             'trial_date' => ['nullable', 'date'],
             'implementation_date' => ['nullable', 'date'],
             'ratification_date' => ['nullable', 'date'],

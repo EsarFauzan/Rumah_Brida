@@ -106,6 +106,43 @@ class ResearchProposalApiTest extends TestCase
         $this->assertArrayNotHasKey('chapter_three', $response->json('data.0'));
     }
 
+    public function test_public_proposal_list_can_search_title_researcher_and_institution(): void
+    {
+        $owner = User::factory()->create();
+
+        foreach ([
+            ['proposal_title' => 'Kajian Pesisir Donggala', 'researcher_name' => 'Nadia Putri', 'institution' => 'Universitas Tadulako'],
+            ['proposal_title' => 'Pemetaan Komoditas', 'researcher_name' => 'Rizal Akbar', 'institution' => 'BRIDA Sulawesi Tengah'],
+            ['proposal_title' => 'Riset Draft Rahasia', 'researcher_name' => 'Nadia Putri', 'institution' => 'Universitas Tadulako', 'status' => 'draft'],
+        ] as $overrides) {
+            ResearchProposal::create($this->payload([
+                'user_id' => $owner->id,
+                'status' => 'submitted',
+                'submitted_at' => now(),
+                ...$overrides,
+            ], withAction: false));
+        }
+
+        $this->getJson('/api/research-proposals?search=Pesisir')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.proposal_title', 'Kajian Pesisir Donggala');
+
+        $this->getJson('/api/research-proposals?search=Nadia')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.researcher_name', 'Nadia Putri');
+
+        $this->getJson('/api/research-proposals?search=BRIDA')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.institution', 'BRIDA Sulawesi Tengah');
+
+        $this->getJson('/api/research-proposals?search='.str_repeat('a', 256))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('search');
+    }
+
     public function test_draft_is_hidden_from_guests(): void
     {
         ResearchProposal::create($this->payload([
