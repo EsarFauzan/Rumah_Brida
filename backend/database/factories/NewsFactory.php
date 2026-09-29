@@ -29,6 +29,7 @@ class NewsFactory extends Factory
             'summary' => fake()->paragraph(),
             'content' => fake()->paragraphs(3, true),
             'image_path' => null,
+            'homepage_thumbnail_path' => null,
             'secondary_image_path' => null,
             'status' => 'published',
             'published_at' => now(),

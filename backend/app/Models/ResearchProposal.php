@@ -19,18 +19,20 @@ class ResearchProposal extends Model
         'pdf_path',
         'pdf_original_name',
         'status',
+        'submitted_at',
+    ];
+
+    protected $hidden = [
         'verification_status',
         'review_note',
         'reviewed_by_id',
         'reviewed_at',
-        'submitted_at',
     ];
 
     protected function casts(): array
     {
         return [
             'submitted_at' => 'datetime',
-            'reviewed_at' => 'datetime',
         ];
     }
 

@@ -26,6 +26,7 @@ class NewsApiTest extends TestCase
             ->assertJsonPath('data.0.content', null);
 
         $this->assertArrayHasKey('image_url', $response->json('data.0'));
+        $this->assertArrayHasKey('homepage_thumbnail_url', $response->json('data.0'));
     }
 
     public function test_public_index_limit_is_clamped(): void
@@ -35,6 +36,26 @@ class NewsApiTest extends TestCase
         $this->getJson('/api/news')->assertOk()->assertJsonCount(3, 'data');
         $this->getJson('/api/news?limit=1')->assertOk()->assertJsonCount(1, 'data');
         $this->getJson('/api/news?limit=99')->assertOk()->assertJsonCount(4, 'data');
+    }
+
+    public function test_public_archive_is_paginated_searchable_and_hides_drafts(): void
+    {
+        News::factory()->count(11)->create();
+        News::factory()->create(['title' => 'Kolaborasi Pangan Daerah', 'category' => 'Riset']);
+        News::factory()->draft()->create(['title' => 'Kolaborasi Draft']);
+
+        $this->getJson('/api/news?page=1&per_page=9')->assertOk()
+            ->assertJsonCount(9, 'data')
+            ->assertJsonPath('pagination.total', 12)
+            ->assertJsonPath('pagination.last_page', 2);
+        $this->getJson('/api/news?page=2&per_page=9')->assertOk()
+            ->assertJsonCount(3, 'data');
+        $this->getJson('/api/news?page=1&search=Pangan')->assertOk()
+            ->assertJsonPath('pagination.total', 1)
+            ->assertJsonPath('data.0.title', 'Kolaborasi Pangan Daerah')
+            ->assertJsonPath('data.0.content', null);
+        $this->getJson('/api/news?page=0&per_page=99')->assertUnprocessable()
+            ->assertJsonValidationErrors(['page', 'per_page']);
     }
 
     public function test_public_show_returns_published_news_and_hides_draft(): void
@@ -77,6 +98,7 @@ class NewsApiTest extends TestCase
             'title' => 'Inovasi Riset Daerah',
             'status' => 'published',
             'image' => $this->fakeImage(),
+            'homepage_thumbnail' => $this->fakeImage(),
         ]))
             ->assertCreated()
             ->assertJsonPath('data.slug', 'inovasi-riset-daerah')
@@ -85,6 +107,7 @@ class NewsApiTest extends TestCase
         $news = News::sole();
         $this->assertNotNull($news->published_at);
         Storage::disk('public')->assertExists($news->image_path);
+        Storage::disk('public')->assertExists($news->homepage_thumbnail_path);
     }
 
     public function test_draft_news_has_no_published_at(): void
@@ -138,13 +161,31 @@ class NewsApiTest extends TestCase
         Storage::disk('public')->assertExists($news->fresh()->image_path);
     }
 
+    public function test_admin_update_replaces_homepage_thumbnail(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('news/thumbnail-lama.jpg', 'lama');
+        $news = News::factory()->create(['homepage_thumbnail_path' => 'news/thumbnail-lama.jpg']);
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->putJson("/api/admin/news/{$news->id}", $this->payload([
+            'slug' => $news->slug,
+            'homepage_thumbnail' => $this->fakeImage(),
+        ]))->assertOk();
+
+        Storage::disk('public')->assertMissing('news/thumbnail-lama.jpg');
+        Storage::disk('public')->assertExists($news->fresh()->homepage_thumbnail_path);
+    }
+
     public function test_admin_delete_removes_news_and_images(): void
     {
         Storage::fake('public');
         Storage::disk('public')->put('news/utama.jpg', 'utama');
+        Storage::disk('public')->put('news/homepage.jpg', 'homepage');
         Storage::disk('public')->put('news/tambahan.jpg', 'tambahan');
         $news = News::factory()->create([
             'image_path' => 'news/utama.jpg',
+            'homepage_thumbnail_path' => 'news/homepage.jpg',
             'secondary_image_path' => 'news/tambahan.jpg',
         ]);
         Sanctum::actingAs(User::factory()->admin()->create());
@@ -153,6 +194,7 @@ class NewsApiTest extends TestCase
 
         $this->assertDatabaseMissing('news', ['id' => $news->id]);
         Storage::disk('public')->assertMissing('news/utama.jpg');
+        Storage::disk('public')->assertMissing('news/homepage.jpg');
         Storage::disk('public')->assertMissing('news/tambahan.jpg');
     }
 
@@ -162,7 +204,28 @@ class NewsApiTest extends TestCase
         News::factory()->draft()->create();
         Sanctum::actingAs(User::factory()->admin()->create());
 
-        $this->getJson('/api/admin/news')->assertOk()->assertJsonCount(2, 'data');
+        $this->getJson('/api/admin/news')->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('pagination.total', 2)
+            ->assertJsonPath('counts.total', 2)
+            ->assertJsonPath('counts.published', 1)
+            ->assertJsonPath('counts.draft', 1);
+    }
+
+    public function test_admin_index_is_paginated_and_filterable(): void
+    {
+        News::factory()->count(11)->create();
+        News::factory()->draft()->create(['title' => 'Catatan Khusus']);
+        Sanctum::actingAs(User::factory()->admin()->create());
+
+        $this->getJson('/api/admin/news?page=1')->assertOk()
+            ->assertJsonCount(10, 'data')
+            ->assertJsonPath('pagination.total', 12);
+        $this->getJson('/api/admin/news?page=1&status=draft&search=Khusus')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Catatan Khusus');
+        $this->getJson('/api/admin/news?status=invalid')->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
     }
 
     public function test_admin_news_image_is_optimized_to_webp(): void

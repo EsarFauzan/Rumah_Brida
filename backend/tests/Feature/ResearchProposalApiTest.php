@@ -297,50 +297,23 @@ class ResearchProposalApiTest extends TestCase
         $this->deleteJson("/api/research-proposals/{$proposal->id}")->assertForbidden();
     }
 
-    public function test_researcher_cannot_open_admin_proposal_list(): void
-    {
-        Sanctum::actingAs(User::factory()->create());
-
-        $this->getJson('/api/admin/research-proposals')->assertForbidden();
-    }
-
-    public function test_admin_can_approve_or_reject_submitted_proposal(): void
+    public function test_proposal_verification_endpoints_are_not_available(): void
     {
         $proposal = ResearchProposal::create($this->payload([
             'user_id' => User::factory()->create()->id,
             'status' => 'submitted',
             'submitted_at' => now(),
         ], withAction: false));
-        $admin = User::factory()->admin()->create();
-        Sanctum::actingAs($admin);
+        Sanctum::actingAs(User::factory()->admin()->create());
 
-        $this->getJson('/api/admin/research-proposals?verification_status=pending')
-            ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.can_review', true);
-
+        $this->getJson('/api/admin/research-proposals')->assertNotFound();
         $this->patchJson("/api/admin/research-proposals/{$proposal->id}/verification", [
             'verification_status' => 'approved',
-        ])->assertOk()->assertJsonPath('data.verification_status', 'approved');
-
-        $this->assertDatabaseHas('research_proposals', [
-            'id' => $proposal->id,
-            'verification_status' => 'approved',
-            'reviewed_by_id' => $admin->id,
-        ]);
-
-        $this->patchJson("/api/admin/research-proposals/{$proposal->id}/verification", [
-            'verification_status' => 'rejected',
-        ])->assertStatus(422)->assertJsonValidationErrors(['review_note']);
-
-        $this->patchJson("/api/admin/research-proposals/{$proposal->id}/verification", [
-            'verification_status' => 'pending',
-        ])->assertOk()->assertJsonPath('data.verification_status', 'pending');
+        ])->assertNotFound();
 
         $this->assertDatabaseHas('research_proposals', [
             'id' => $proposal->id,
             'verification_status' => 'pending',
-            'reviewed_by_id' => null,
         ]);
     }
 

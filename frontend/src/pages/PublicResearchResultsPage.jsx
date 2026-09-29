@@ -3,6 +3,8 @@ import { Search, X } from 'lucide-react'
 import Pagination from '../components/Pagination'
 import api from '../services/api'
 import { PublicFileLink, publicInformationStyles } from './PublicInformationPage'
+import ServicePageHeader from '../components/ServicePageHeader'
+import FilterSummary from '../components/FilterSummary'
 
 function PublicResearchResultsPage() {
   const [proposals, setProposals] = useState([])
@@ -61,19 +63,7 @@ function PublicResearchResultsPage() {
     <section className="public-info-page">
       <style>{publicInformationStyles}</style>
 
-      <div className="public-info-hero">
-        <div className="public-info-hero-inner">
-          <div>
-            <p>Rumah BRIDA</p>
-            <h1>Hasil Riset</h1>
-            <span>Daftar hasil pengajuan riset dan berkas pelaporan yang dapat diakses publik.</span>
-          </div>
-          <div className="public-info-total">
-            <strong>{pagination?.total ?? 0}</strong>
-            <span>Total Riset</span>
-          </div>
-        </div>
-      </div>
+      <ServicePageHeader section="Info Publik" title="Hasil Riset" description="Pengajuan riset dan berkas pelaporan yang dapat diakses publik." />
 
       <div className="public-info-container public-research-container">
         <div className="public-info-toolbar">
@@ -85,18 +75,21 @@ function PublicResearchResultsPage() {
               placeholder="Cari judul, peneliti, atau institusi..."
               aria-label="Cari hasil riset"
               onChange={(event) => {
+                setIsLoading(true)
                 setSearchTerm(event.target.value)
                 setPage(1)
               }}
             />
             {searchTerm && (
-              <button type="button" aria-label="Hapus pencarian" onClick={() => { setSearchTerm(''); setPage(1) }}>
+              <button type="button" aria-label="Hapus pencarian" onClick={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }}>
                 <X size={15} aria-hidden="true" />
               </button>
             )}
           </label>
         </div>
 
+        <FilterSummary count={pagination?.total} noun="riset" loading={isLoading} error={error} search={searchTerm}
+          onSearchClear={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }} onReset={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }} />
         {error ? (
           <div className="public-info-state" role="alert">{error}</div>
         ) : isLoading ? (
@@ -110,27 +103,27 @@ function PublicResearchResultsPage() {
           </div>
         ) : (
           <div className="public-info-table-wrap">
-            <table className="public-info-table public-research-table">
-              <thead>
-                <tr>
+            <table className="public-info-table public-research-table responsive-records" role="table" aria-label="Hasil riset publik">
+              <thead role="rowgroup">
+                <tr role="row">
                   <th className="public-info-number" scope="col">No</th>
                   <th scope="col">Judul Proposal</th>
                   <th scope="col">Peneliti &amp; Institusi</th>
                   <th className="public-info-file-column" scope="col">Berkas Pelaporan</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {proposals.map((proposal, index) => {
                   const number = ((pagination?.current_page ?? 1) - 1) * (pagination?.per_page ?? 10) + index + 1
                   return (
-                    <tr key={proposal.id}>
-                      <td className="public-info-number-cell">{number}</td>
-                      <td><strong>{proposal.proposal_title}</strong></td>
-                      <td>
+                    <tr key={proposal.id} role="row">
+                      <td role="cell" className="public-info-number-cell">{number}</td>
+                      <td role="cell"><strong>{proposal.proposal_title}</strong></td>
+                      <td role="cell" data-label="Peneliti & institusi">
                         <strong>{proposal.researcher_name}</strong>
                         <span className="public-research-institution">{proposal.institution}</span>
                       </td>
-                      <td><PublicFileLink path={proposal.pdf_url} label="Lihat berkas" /></td>
+                      <td role="cell" data-label="Berkas pelaporan"><PublicFileLink path={proposal.pdf_url} filename={proposal.pdf_original_name || `${proposal.proposal_title}.pdf`} label="Lihat berkas" /></td>
                     </tr>
                   )
                 })}

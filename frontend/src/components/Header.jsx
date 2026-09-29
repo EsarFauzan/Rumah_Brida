@@ -1,16 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   ChevronDown,
-  FileText,
   LayoutDashboard,
   LogOut,
-  Newspaper,
-  UserRound,
-  ClipboardList,
-  Info,
-  Microscope,
-  FileCheck2,
-  UsersRound,
 } from 'lucide-react'
 import logoRumahBrida from '../assets/image/logo-fix.webp'
 import logoRumahBridaDark from '../assets/image/logo-fix-dark.png'
@@ -20,34 +12,44 @@ import ThemeToggle from './ThemeToggle'
 import useAuth from '../hooks/useAuth'
 import api from '../services/api'
 import { clearSession } from '../services/authStore'
+import { administratorRoleLabel } from '../utils/auth'
 
 const menuItems = [
   { label: 'Beranda', href: '/#beranda' },
   {
     label: 'Riset',
     href: '/riset/proposal',
+    adminOnly: true,
     submenu: [
-      { label: 'Proposal Riset', href: '/riset/proposal', desc: 'Ajukan proposal riset baru', icon: FileCheck2 },
-      { label: 'Hasil Riset', href: '/riset/hasil', desc: 'Lihat publikasi hasil riset', icon: Microscope },
+      { label: 'Proposal Riset', href: '/riset/proposal', desc: 'Ajukan dan kelola proposal riset' },
+      { label: 'Hasil Riset', href: '/riset/hasil', desc: 'Kelola proposal riset yang dikirim' },
     ],
   },
   {
     label: 'Inovasi',
     href: '/inovasi/input',
+    adminOnly: true,
     submenu: [
-      { label: 'Input Inovasi', href: '/inovasi/input', desc: 'Daftarkan inovasi daerah', icon: ClipboardList },
-      { label: 'Info', href: '/inovasi/info', desc: 'Jelajahi data inovasi', icon: Info },
+      { label: 'Input Inovasi', href: '/inovasi/input', desc: 'Tambahkan data inovasi daerah' },
+      { label: 'Info Inovasi', href: '/inovasi/info', desc: 'Kelola data dan berkas inovasi' },
     ],
   },
   {
     label: 'Info Publik',
     href: '/info-publik/peneliti',
     submenu: [
-      { label: 'Info Peneliti', href: '/info-publik/peneliti', desc: 'Data inovasi dan dokumen publik', icon: UsersRound },
-      { label: 'Hasil Riset', href: '/info-publik/hasil-riset', desc: 'Daftar proposal riset yang dikirim', icon: Microscope },
+      { label: 'Dokumen Inovasi', href: '/info-publik/peneliti', desc: 'Profil dan laporan inovasi daerah' },
+      { label: 'Hasil Riset', href: '/info-publik/hasil-riset', desc: 'Daftar proposal riset yang dikirim' },
     ],
   },
-  { label: 'Lomba', href: '#lomba', submenu: [] },
+  {
+    label: 'Lomba',
+    href: '/lomba/pendaftaran',
+    submenu: [
+      { label: 'Pendaftaran', href: '/lomba/pendaftaran', desc: 'Lihat informasi pendaftaran lomba' },
+      { label: 'Daftar Lomba', href: '/admin/lomba', desc: 'Kelola informasi dan periode lomba', adminOnly: true },
+    ],
+  },
   { label: 'Lapor!', href: 'https://sp4n.lapor.go.id/', external: true },
 ]
 
@@ -80,6 +82,10 @@ const getActiveMenu = () => {
     return 'Info Publik'
   }
 
+  if (pathname === '/lomba' || pathname.startsWith('/lomba/') || pathname === '/admin/lomba') {
+    return 'Lomba'
+  }
+
   if (pathname === '/') {
     if (hash === '#inovasi') {
       return 'Inovasi'
@@ -106,7 +112,8 @@ function Header() {
   const [activeMenu, setActiveMenu] = useState(getActiveMenu)
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const { isAuthenticated, user } = useAuth()
+  const { user, isAdministrator } = useAuth()
+  const visibleMenuItems = menuItems.filter((item) => !item.adminOnly || isAdministrator)
   const theme = useTheme()
   const headerRef = useRef(null)
   const accountRef = useRef(null)
@@ -226,8 +233,9 @@ function Header() {
 
         <nav className={`main-nav ${isOpen ? 'is-open' : ''}`} aria-label="Navigasi utama">
           <ul>
-            {menuItems.map((item) => {
-              const hasSubmenu = item.submenu?.length > 0
+            {visibleMenuItems.map((item) => {
+              const visibleSubmenu = item.submenu?.filter((subitem) => !subitem.adminOnly || isAdministrator) ?? []
+              const hasSubmenu = visibleSubmenu.length > 0
               const isSubmenuOpen = hasSubmenu && openMenu === item.label
               const isActive = activeMenu === item.label
               const panelId = submenuId(item.label)
@@ -267,8 +275,7 @@ function Header() {
                   )}
                   {hasSubmenu && (
                     <div className="submenu subm-rich" id={panelId}>
-                      {item.submenu.map((subitem) => {
-                        const SubIcon = subitem.icon
+                      {visibleSubmenu.map((subitem) => {
                         return (
                           <a
                             key={subitem.label}
@@ -279,11 +286,6 @@ function Header() {
                               setActiveMenu(item.label)
                             }}
                           >
-                            {SubIcon && (
-                              <span className="subm-icon">
-                                <SubIcon size={17} strokeWidth={2} aria-hidden="true" />
-                              </span>
-                            )}
                             <span className="subm-text">
                               <span className="subm-title">{subitem.label}</span>
                               {subitem.desc && <span className="subm-desc">{subitem.desc}</span>}
@@ -299,35 +301,21 @@ function Header() {
           </ul>
           <div className="mobile-account-actions">
             <ThemeToggle />
-            {isAuthenticated ? (
+            {isAdministrator && (
               <>
-                {user?.role === 'admin' && (
-                  <a href="/admin/proposal" onClick={closeAll}>
-                    <LayoutDashboard size={16} strokeWidth={2.25} aria-hidden="true" />
-                    Dashboard Admin
-                  </a>
-                )}
-                <a href="/riset/draft" onClick={closeAll}>
-                  <FileText size={16} strokeWidth={2.25} aria-hidden="true" />
-                  Draft Saya
-                </a>
+                <a href="/admin" onClick={closeAll}><LayoutDashboard size={16} strokeWidth={2.1} aria-hidden="true" />Panel Admin</a>
                 <button type="button" disabled={isLoggingOut} onClick={logout}>
                   <LogOut size={16} strokeWidth={2.25} aria-hidden="true" />
                   {isLoggingOut ? 'Keluar...' : 'Keluar'}
                 </button>
               </>
-            ) : (
-              <a href="/masuk" onClick={closeAll}>
-                <UserRound size={16} strokeWidth={1.9} aria-hidden="true" />
-                Masuk
-              </a>
             )}
           </div>
         </nav>
 
         <div className={`header-account${isAccountMenuOpen ? ' is-open' : ''}`} ref={accountRef}>
           <ThemeToggle />
-          {isAuthenticated ? (
+          {isAdministrator && (
             <>
               <button
                 className="profile-button"
@@ -348,33 +336,17 @@ function Header() {
               <div className="account-menu" id="account-menu" aria-hidden={!isAccountMenuOpen}>
                 <div className="account-menu-info">
                   <strong>{user?.name ?? 'Akun BRIDA'}</strong>
-                  <span>{user?.email ?? user?.role ?? 'Peneliti'}</span>
+                  <span>{user?.email ?? 'Akun BRIDA'}</span>
+                  <small className="account-menu-role">{administratorRoleLabel(user)}</small>
                 </div>
                 <div className="account-menu-divider" />
-                {user?.role === 'admin' && (
-                  <>
-                    <a className="account-menu-link" href="/admin/proposal" onClick={closeAll}>
-                      <LayoutDashboard size={16} strokeWidth={2.25} aria-hidden="true" />
-                      Dashboard Admin
-                    </a>
-                    <a className="account-menu-link" href="/admin/berita" onClick={closeAll}><Newspaper size={16} aria-hidden="true" />Kelola Berita</a>
-                  </>
-                )}
-                <a className="account-menu-link" href="/riset/draft" onClick={closeAll}>
-                  <FileText size={16} strokeWidth={2.25} aria-hidden="true" />
-                  Draft Saya
-                </a>
+                <a className="account-menu-link" href="/admin" onClick={closeAll}><LayoutDashboard size={16} strokeWidth={2.1} aria-hidden="true" />Buka Panel Admin</a>
                 <button className="account-menu-logout" type="button" disabled={isLoggingOut} onClick={logout}>
                   <LogOut size={16} strokeWidth={2.25} aria-hidden="true" />
                   {isLoggingOut ? 'Keluar...' : 'Keluar'}
                 </button>
               </div>
             </>
-          ) : (
-            <a className="account-button" href="/masuk" onClick={closeAll}>
-              <UserRound size={16} strokeWidth={1.9} aria-hidden="true" />
-              <span>Masuk</span>
-            </a>
           )}
         </div>
       </div>
@@ -405,20 +377,6 @@ const submenuStyles = `
   margin-top: 5px;
 }
 
-.subm-item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, var(--yellow), var(--navy));
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: transform 220ms cubic-bezier(.4,0,.2,1);
-}
-
 .subm-item:hover,
 .subm-item:focus-visible {
   background: var(--surface-hover) !important;
@@ -429,31 +387,6 @@ const submenuStyles = `
 [data-theme='dark'] .subm-item:hover,
 [data-theme='dark'] .subm-item:focus-visible {
   box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
-}
-
-.subm-item:hover::before,
-.subm-item:focus-visible::before {
-  transform: scaleY(1);
-}
-
-.subm-icon {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: var(--bg-soft);
-  color: var(--navy);
-  transition: background-color 200ms ease, color 200ms ease, transform 220ms cubic-bezier(.34, 1.56, .64, 1);
-}
-
-.subm-item:hover .subm-icon,
-.subm-item:focus-visible .subm-icon {
-  background: linear-gradient(135deg, var(--navy-deep), var(--navy));
-  color: var(--yellow);
-  transform: scale(1.08) rotate(-4deg);
 }
 
 .subm-text {
@@ -483,11 +416,6 @@ const submenuStyles = `
   }
   .subm-item {
     padding: 11px 12px !important;
-  }
-  .subm-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
   }
 }
 `

@@ -15,10 +15,44 @@ class NewsController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $limit = $request->integer('limit', 3);
-        $limit = min(max($limit, 1), 10);
+        $query = News::query()
+            ->where('status', 'published')
+            ->latest('published_at')
+            ->latest('id');
 
-        return response()->json(['data' => News::query()->where('status', 'published')->latest('published_at')->limit($limit)->get()->map(fn (News $news) => $this->serialize($news, false))]);
+        if ($request->has('page') || $request->has('search') || $request->has('per_page')) {
+            $filters = $request->validate([
+                'search' => ['nullable', 'string', 'max:255'],
+                'page' => ['nullable', 'integer', 'min:1'],
+                'per_page' => ['nullable', 'integer', 'min:1', 'max:20'],
+            ]);
+            $search = trim($filters['search'] ?? '');
+            if ($search !== '') {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'like', '%'.$search.'%')
+                        ->orWhere('card_title', 'like', '%'.$search.'%')
+                        ->orWhere('category', 'like', '%'.$search.'%')
+                        ->orWhere('summary', 'like', '%'.$search.'%');
+                });
+            }
+            $paginator = $query->paginate($filters['per_page'] ?? 9)->withQueryString();
+
+            return response()->json([
+                'data' => collect($paginator->items())->map(fn (News $news) => $this->serialize($news, false))->values(),
+                'pagination' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ],
+            ]);
+        }
+
+        $limit = min(max($request->integer('limit', 3), 1), 10);
+
+        return response()->json([
+            'data' => $query->limit($limit)->get()->map(fn (News $news) => $this->serialize($news, false)),
+        ]);
     }
 
     public function show(string $slug): JsonResponse
@@ -31,15 +65,53 @@ class NewsController extends Controller
     public function adminIndex(Request $request): JsonResponse
     {
         Gate::authorize('viewAny', News::class);
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'status' => ['nullable', Rule::in(['draft', 'published'])],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
+        ]);
+        $query = News::query()->latest();
+        $search = trim($filters['search'] ?? '');
+        if ($search !== '') {
+            $query->where(function ($query) use ($search) {
+                $query->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('card_title', 'like', '%'.$search.'%')
+                    ->orWhere('category', 'like', '%'.$search.'%');
+            });
+        }
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        $paginator = $query->paginate($filters['per_page'] ?? 10)->withQueryString();
 
-        return response()->json(['data' => News::query()->latest()->get()->map(fn (News $news) => $this->serialize($news, true))]);
+        return response()->json([
+            'data' => collect($paginator->items())->map(fn (News $news) => $this->serialize($news, true))->values(),
+            'pagination' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+            'counts' => [
+                'total' => News::count(),
+                'published' => News::where('status', 'published')->count(),
+                'draft' => News::where('status', 'draft')->count(),
+            ],
+        ]);
     }
 
     public function store(Request $request): JsonResponse
     {
         Gate::authorize('create', News::class);
         $data = $this->validated($request);
-        $news = News::create([...$data, 'user_id' => $request->user()->id, 'image_path' => $this->storeImage($request, 'image'), 'secondary_image_path' => $this->storeImage($request, 'secondary_image')]);
+        $news = News::create([
+            ...$data,
+            'user_id' => $request->user()->id,
+            'image_path' => $this->storeImage($request, 'image'),
+            'homepage_thumbnail_path' => $this->storeImage($request, 'homepage_thumbnail'),
+            'secondary_image_path' => $this->storeImage($request, 'secondary_image'),
+        ]);
 
         return response()->json(['message' => 'Berita berhasil disimpan.', 'data' => $this->serialize($news, true)], 201);
     }
@@ -48,7 +120,7 @@ class NewsController extends Controller
     {
         Gate::authorize('update', $news);
         $data = $this->validated($request, $news);
-        foreach (['image' => 'image_path', 'secondary_image' => 'secondary_image_path'] as $input => $column) {
+        foreach (['image' => 'image_path', 'homepage_thumbnail' => 'homepage_thumbnail_path', 'secondary_image' => 'secondary_image_path'] as $input => $column) {
             if ($request->hasFile($input)) {
                 if ($news->$column) {
                     Storage::disk('public')->delete($news->$column);
@@ -63,7 +135,7 @@ class NewsController extends Controller
     public function destroy(News $news): JsonResponse
     {
         Gate::authorize('delete', $news);
-        foreach ([$news->image_path, $news->secondary_image_path] as $path) {
+        foreach ([$news->image_path, $news->homepage_thumbnail_path, $news->secondary_image_path] as $path) {
             if ($path) {
                 Storage::disk('public')->delete($path);
             }
@@ -80,9 +152,9 @@ class NewsController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'], 'card_title' => ['nullable', 'string', 'max:120'], 'slug' => ['required', 'string', 'max:255', Rule::unique('news', 'slug')->ignore($news)],
             'category' => ['required', 'string', 'max:80'], 'summary' => ['required', 'string', 'max:500'], 'content' => ['required', 'string'], 'status' => ['required', Rule::in(['draft', 'published'])],
-            'image' => ['nullable', 'image', 'max:5120'], 'secondary_image' => ['nullable', 'image', 'max:5120'],
+            'image' => ['nullable', 'image', 'max:5120'], 'homepage_thumbnail' => ['nullable', 'image', 'max:5120'], 'secondary_image' => ['nullable', 'image', 'max:5120'],
         ]);
-        unset($data['image'], $data['secondary_image']);
+        unset($data['image'], $data['homepage_thumbnail'], $data['secondary_image']);
         $data['published_at'] = $data['status'] === 'published' ? ($news?->published_at ?? now()) : null;
 
         return $data;
@@ -165,6 +237,12 @@ class NewsController extends Controller
 
     private function serialize(News $news, bool $detail): array
     {
-        return [...$news->toArray(), 'image_url' => $news->image_path ? Storage::disk('public')->url($news->image_path) : null, 'secondary_image_url' => $news->secondary_image_path ? Storage::disk('public')->url($news->secondary_image_path) : null, ...($detail ? [] : ['content' => null])];
+        return [
+            ...$news->toArray(),
+            'image_url' => $news->image_path ? Storage::disk('public')->url($news->image_path) : null,
+            'homepage_thumbnail_url' => $news->homepage_thumbnail_path ? Storage::disk('public')->url($news->homepage_thumbnail_path) : null,
+            'secondary_image_url' => $news->secondary_image_path ? Storage::disk('public')->url($news->secondary_image_path) : null,
+            ...($detail ? [] : ['content' => null]),
+        ];
     }
 }

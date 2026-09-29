@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { ExternalLink, FileText, Search, X } from 'lucide-react'
 import Pagination from '../components/Pagination'
 import api from '../services/api'
-import { storageUrl } from '../utils/fileUrl'
+import { storageUrl, innovationPdfUrl } from '../utils/fileUrl'
+import ServicePageHeader from '../components/ServicePageHeader'
+import FilterSummary from '../components/FilterSummary'
+import PdfPreviewLink from '../components/PdfPreviewLink'
 
 function PublicInformationPage() {
   const [innovations, setInnovations] = useState([])
@@ -61,19 +64,7 @@ function PublicInformationPage() {
     <section className="public-info-page">
       <style>{publicInformationStyles}</style>
 
-      <div className="public-info-hero">
-        <div className="public-info-hero-inner">
-          <div>
-            <p>Rumah BRIDA</p>
-            <h1>Info Peneliti</h1>
-            <span>Informasi inovasi daerah beserta dokumen publik dan laporan pelaksanaannya.</span>
-          </div>
-          <div className="public-info-total">
-            <strong>{total}</strong>
-            <span>Total Inovasi</span>
-          </div>
-        </div>
-      </div>
+      <ServicePageHeader section="Info Publik" title="Dokumen Inovasi" description="Profil dan laporan pelaksanaan inovasi daerah yang dapat diakses publik." total={total} totalLabel="inovasi" />
 
       <div className="public-info-container">
         <div className="public-info-toolbar">
@@ -85,12 +76,13 @@ function PublicInformationPage() {
               placeholder="Cari judul inovasi..."
               aria-label="Cari judul inovasi"
               onChange={(event) => {
+                setIsLoading(true)
                 setSearchTerm(event.target.value)
                 setPage(1)
               }}
             />
             {searchTerm && (
-              <button type="button" aria-label="Hapus pencarian" onClick={() => { setSearchTerm(''); setPage(1) }}>
+              <button type="button" aria-label="Hapus pencarian" onClick={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }}>
                 <X size={15} aria-hidden="true" />
               </button>
             )}
@@ -101,6 +93,7 @@ function PublicInformationPage() {
             value={yearFilter}
             aria-label="Filter tahun pelaporan"
             onChange={(event) => {
+              setIsLoading(true)
               setYearFilter(event.target.value)
               setPage(1)
             }}
@@ -110,6 +103,9 @@ function PublicInformationPage() {
           </select>
         </div>
 
+        <FilterSummary count={pagination?.total} noun="inovasi" loading={isLoading} error={error} search={searchTerm} year={yearFilter}
+          onSearchClear={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }} onYearClear={() => { setIsLoading(true); setYearFilter('all'); setPage(1) }}
+          onReset={() => { setIsLoading(true); setSearchTerm(''); setYearFilter('all'); setPage(1) }} />
         {error ? (
           <div className="public-info-state" role="alert">{error}</div>
         ) : isLoading ? (
@@ -123,9 +119,9 @@ function PublicInformationPage() {
           </div>
         ) : (
           <div className="public-info-table-wrap">
-            <table className="public-info-table">
-              <thead>
-                <tr>
+            <table className="public-info-table responsive-records" role="table" aria-label="Dokumen inovasi daerah">
+              <thead role="rowgroup">
+                <tr role="row">
                   <th className="public-info-number" scope="col">No</th>
                   <th scope="col">Judul Inovasi</th>
                   <th scope="col">OPD</th>
@@ -133,16 +129,16 @@ function PublicInformationPage() {
                   <th className="public-info-file-column" scope="col">File Laporan</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {innovations.map((innovation, index) => {
                   const number = ((pagination?.current_page ?? 1) - 1) * (pagination?.per_page ?? 10) + index + 1
                   return (
-                    <tr key={innovation.id}>
-                      <td className="public-info-number-cell">{number}</td>
-                      <td><strong>{innovation.title}</strong></td>
-                      <td>{innovation.regional_agency || <em>Belum diisi</em>}</td>
-                      <td><PublicFileLink path={innovation.profile_pdf_path} label="Lihat file publik" /></td>
-                      <td><PublicFileLink path={innovation.report_pdf_path} label="Lihat file laporan" /></td>
+                    <tr key={innovation.id} role="row">
+                      <td role="cell" className="public-info-number-cell">{number}</td>
+                      <td role="cell"><strong>{innovation.title}</strong></td>
+                      <td role="cell" data-label="OPD">{innovation.regional_agency || <em>Belum diisi</em>}</td>
+                      <td role="cell" data-label="File publik"><PublicFileLink path={innovation.profile_pdf_path} pdfUrl={innovationPdfUrl(innovation.id, 'profile')} filename={innovation.profile_pdf_original_name || `Profil ${innovation.title}.pdf`} label="Lihat file publik" /></td>
+                      <td role="cell" data-label="File laporan"><PublicFileLink path={innovation.report_pdf_path} pdfUrl={innovationPdfUrl(innovation.id, 'report')} filename={innovation.report_pdf_original_name || `Laporan ${innovation.title}.pdf`} label="Lihat file laporan" /></td>
                     </tr>
                   )
                 })}
@@ -157,22 +153,22 @@ function PublicInformationPage() {
   )
 }
 
-export function PublicFileLink({ path, label }) {
+export function PublicFileLink({ path, pdfUrl, label, filename }) {
   if (!path) return <span className="public-info-unavailable">Belum tersedia</span>
   const href = /^https?:\/\//i.test(path) ? path : storageUrl(path)
 
   return (
-    <a className="public-info-file" href={href} target="_blank" rel="noopener noreferrer">
+    <PdfPreviewLink className="public-info-file" href={pdfUrl || href} filename={filename}>
       <FileText size={15} aria-hidden="true" />
       <span>{label}</span>
       <ExternalLink size={13} aria-hidden="true" />
-    </a>
+    </PdfPreviewLink>
   )
 }
 
 export const publicInformationStyles = `
 .public-info-page { min-height: 100vh; padding-bottom: 80px; background: var(--bg-soft); }
-.public-info-hero { padding: 36px 40px 40px; color: #fff; background: linear-gradient(120deg, var(--navy-deep), var(--navy)); }
+.public-info-hero { padding: 36px 40px 40px; color: #fff; background: linear-gradient(120deg, var(--page-banner-start), var(--page-banner-end)); }
 .public-info-hero-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
 .public-info-hero p { margin: 0 0 8px; color: var(--yellow); font-size: 12px; font-weight: 800; text-transform: uppercase; }
 .public-info-hero h1 { margin: 0 0 8px; font-size: 30px; }

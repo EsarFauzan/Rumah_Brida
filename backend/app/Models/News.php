@@ -12,7 +12,7 @@ class News extends Model
     /** @use HasFactory<NewsFactory> */
     use HasFactory;
 
-    protected $fillable = ['user_id', 'title', 'card_title', 'slug', 'category', 'summary', 'content', 'image_path', 'secondary_image_path', 'status', 'published_at'];
+    protected $fillable = ['user_id', 'title', 'card_title', 'slug', 'category', 'summary', 'content', 'image_path', 'homepage_thumbnail_path', 'secondary_image_path', 'status', 'published_at'];
 
     protected function casts(): array
     {

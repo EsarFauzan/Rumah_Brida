@@ -1,7 +1,10 @@
 # Rumah BRIDA - Panduan Agent
 
 Dokumen ini adalah titik awal untuk agent AI yang akan melanjutkan development.
-Baca dokumen ini, lalu periksa `git status` sebelum mengubah file.
+Sebelum menambah, mengubah, atau menghapus kode apa pun, agent WAJIB membaca
+ulang `AGENTS.md` sampai selesai, lalu memeriksa `git status`. Kewajiban ini
+tetap berlaku ketika melanjutkan pekerjaan dari agent lain atau setelah project
+menerima perubahan baru.
 
 ## 1. Tujuan Produk
 
@@ -10,7 +13,8 @@ Fitur yang sudah tersedia:
 
 - Beranda dengan hero, berita terbaru, navbar, dan footer.
 - Berita dari database dan API publik, dengan kelola berita untuk admin.
-- Registrasi dan login peneliti dengan token Sanctum.
+- Login khusus administrator (`admin` dan `superadmin`) dengan token Sanctum;
+  registrasi publik dinonaktifkan.
 - Pengajuan proposal riset dan simpan draft (wajib login).
 - Halaman Draft Saya untuk melihat, melanjutkan edit, membuka detail/PDF, dan menghapus draft milik sendiri.
 - Daftar hasil/proposal yang sudah dikirim.
@@ -20,8 +24,16 @@ Fitur yang sudah tersedia:
 - Tampilan responsif desktop dan mobile.
 
 Inovasi sudah memiliki form tambah/edit, daftar publik, dan API database.
-Menu `Lomba` belum memiliki halaman khusus. `Lapor!` membuka
+Menu `Lomba` memiliki halaman pendaftaran publik dan kelola daftar lomba khusus
+admin yang terhubung ke database serta upload Juknis privat. `Lapor!` membuka
 SP4N LAPOR di tab baru, bukan formulir internal.
+Navbar publik berisi Beranda, Info Publik, Lomba, dan Lapor. Submenu Lomba
+menampilkan `Pendaftaran` untuk semua pengguna dan menambahkan `Daftar Lomba`
+menuju `/admin/lomba` hanya untuk admin/superadmin. Setelah admin atau
+superadmin masuk, navbar juga menampilkan menu operasional `Riset` dan `Inovasi` agar alur
+kerja utama cepat dijangkau; keduanya wajib memakai `adminOnly` dan disaring
+berdasarkan role. Panel `/admin` tetap menjadi titik masuk seluruh modul.
+Pengunjung mengakses hasil melalui dua submenu `Info Publik`.
 
 ## 2. Teknologi
 
@@ -32,7 +44,7 @@ SP4N LAPOR di tab baru, bukan formulir internal.
 | Autentikasi | Laravel Sanctum 4, bearer token API |
 | Database | MySQL, database `Rumah_brida` |
 | File proposal | Laravel private storage, disajikan lewat URL bertanda tangan |
-| Tema | Light/dark via `data-theme` di `<html>`, CSS variables, View Transition API |
+| Tema | Light/dark via `data-theme` di `<html>` dan CSS variables |
 
 Frontend dan backend adalah dua aplikasi terpisah:
 
@@ -56,15 +68,28 @@ frontend/
   src/components/DeleteItemModal.jsx  Dialog hapus generik (fokus trap, scroll lock)
   src/components/DeleteProposalModal.jsx Dialog hapus proposal (wrapper DeleteItemModal)
   src/components/DeleteNewsModal.jsx  Dialog hapus berita (wrapper DeleteItemModal)
+  src/components/DeleteCompetitionModal.jsx Dialog hapus lomba
   src/components/Footer.jsx           Footer global
   src/components/ThemeToggle.jsx      Tombol light/dark dengan ripple View Transition
   src/components/HeroSection.jsx      Hero beranda
-  src/components/NewsSection.jsx      Slider berita beranda
+  src/components/NewsSection.jsx      Berita editorial: satu utama dan dua pendamping
+  src/components/ServicePageHeader.jsx Header layanan ringkas
+  src/components/FilterSummary.jsx    Jumlah hasil, filter aktif, dan reset
+  src/components/PdfPreviewLink.jsx   Pratinjau PDF, tab baru, dan unduhan blob
+  src/components/ServiceDialog.jsx    Dialog native bersama untuk PDF/review
+  src/components/SubmissionReview.jsx Ringkasan sebelum pengiriman
+  src/components/PdfUploadField.jsx   Upload PDF bersama dan berkas tersimpan
+  src/components/FormProgress.jsx    Kelengkapan tiap bagian form
+  src/components/FieldRequirement.jsx Label wajib/opsional
+  src/utils/submission.js            Validasi frontend sebelum ringkasan
+  src/ServiceDesign.css              Styling modern layanan dan beranda
   src/hooks/useAuth.js                Hook sesi login (useSyncExternalStore)
   src/hooks/useTheme.js               Hook tema aktif (useSyncExternalStore)
-  src/pages/LoginPage.jsx             Halaman masuk dan daftar
-  src/pages/AdminResearchProposalsPage.jsx Dashboard verifikasi proposal admin
+  src/pages/LoginPage.jsx             Halaman login khusus administrator
+  src/pages/AdminDashboardPage.jsx    Panel modul operasional admin
+  src/pages/AdminAdministratorsPage.jsx Kelola akun admin, khusus superadmin
   src/pages/AdminNewsPage.jsx            Form dan daftar kelola berita admin
+  src/pages/NewsArchivePage.jsx       Arsip berita publik, pencarian, dan pagination
   src/pages/NewsDetailPage.jsx        Detail berita
   src/pages/ResearchDraftsPage.jsx    Daftar draft milik akun aktif
   src/pages/ResearchProposalPage.jsx  Form tambah dan edit proposal
@@ -74,6 +99,8 @@ frontend/
   src/pages/InovasiInfoPage.jsx       Daftar inovasi dengan aksi pemilik
   src/pages/PublicInformationPage.jsx Tabel publik inovasi dan dokumennya
   src/pages/PublicResearchResultsPage.jsx Tabel publik hasil riset read-only
+  src/pages/CompetitionRegistrationPage.jsx Form peserta, daftar lomba, dan Juknis publik
+  src/pages/AdminCompetitionsPage.jsx      CRUD daftar lomba khusus admin
   src/services/api.js                 Axios base URL dan interceptor token
   src/services/authStore.js           Penyimpanan token di sessionStorage
   src/services/themeStore.js          Tema light/dark: persistensi + listener
@@ -82,13 +109,24 @@ frontend/
 backend/
   routes/api.php
   app/Http/Controllers/AuthController.php
+  app/Http/Controllers/AdministratorController.php
+  app/Http/Middleware/EnsureUserIsActive.php
+  app/Http/Middleware/EnsureUserIsAdmin.php
+  app/Http/Middleware/EnsureUserIsSuperAdmin.php
+  app/Console/Commands/CreateAdmin.php
+  app/Console/Commands/CreateSuperAdmin.php
   app/Http/Controllers/NewsController.php
   app/Http/Controllers/ResearchProposalController.php
+  app/Http/Controllers/CompetitionController.php
+  app/Http/Controllers/CompetitionRegistrationController.php
   app/Policies/NewsPolicy.php
   app/Policies/ResearchProposalPolicy.php
+  app/Policies/CompetitionPolicy.php
   app/Providers/AppServiceProvider.php   Definisi rate limiter
   app/Models/News.php
   app/Models/ResearchProposal.php
+  app/Models/Competition.php
+  app/Models/CompetitionRegistration.php
   app/Models/User.php
   bootstrap/app.php                      throttleApi()
   database/factories/NewsFactory.php
@@ -100,9 +138,16 @@ backend/
   database/migrations/2026_09_07_000000_add_role_to_users_table.php
   database/migrations/2026_09_08_000000_add_verification_fields_to_research_proposals_table.php
   database/migrations/2026_09_09_000000_create_news_table.php
+  database/migrations/2026_09_27_000000_add_homepage_thumbnail_to_news_table.php
+  database/migrations/2026_09_27_120000_add_is_active_to_users_table.php
+  database/migrations/2026_09_29_000000_create_competitions_table.php
+  database/migrations/2026_09_29_120000_create_competition_registrations_table.php
+  tests/Feature/AdministratorApiTest.php
+  tests/Feature/CreateSuperAdminCommandTest.php
   tests/Feature/AuthApiTest.php
   tests/Feature/NewsApiTest.php
   tests/Feature/ResearchProposalApiTest.php
+  tests/Feature/CompetitionApiTest.php
   config/auth.php                        Guard default `sanctum`
   config/cors.php
   config/sanctum.php
@@ -114,31 +159,43 @@ backend/
 | URL | Halaman |
 |---|---|
 | `/` | Beranda |
+| `/berita` | Arsip seluruh berita terbit, dengan pencarian dan pagination |
 | `/berita/{slug}` | Detail berita |
-| `/masuk` | Masuk dan daftar akun |
+| `/masuk` | Redirect kompatibilitas ke `/admin/login` |
+| `/admin/login` | Login khusus administrator |
+| `/admin` | Panel modul operasional, khusus admin/superadmin |
+| `/admin/administrators` | Kelola akun admin, khusus superadmin |
 | `/riset/proposal` | Form proposal baru |
 | `/riset/draft` | Daftar draft milik akun aktif |
 | `/riset/hasil` | Daftar proposal terkirim |
 | `/riset/hasil/{id}` | Detail proposal |
 | `/riset/proposal/{id}/edit` | Edit proposal |
-| `/admin/proposal` | Dashboard verifikasi proposal, khusus admin |
 | `/admin/berita` | Kelola berita, khusus admin |
 | `/inovasi/input` | Form inovasi baru, wajib login untuk mengirim |
-| `/inovasi/info` | Daftar inovasi publik |
+| `/inovasi/info` | Daftar pengelolaan inovasi, khusus admin di frontend |
 | `/inovasi/edit/{id}` | Form edit inovasi; API membatasi perubahan ke pemilik |
-| `/info-publik` | Alias halaman Info Peneliti |
+| `/info-publik` | Alias halaman Dokumen Inovasi |
 | `/info-publik/peneliti` | Tabel publik inovasi, OPD, file profil, dan laporan |
 | `/info-publik/hasil-riset` | Tabel publik hasil riset dan berkas pelaporan |
+| `/lomba/pendaftaran` | Informasi dan status pendaftaran lomba untuk publik |
+| `/admin/lomba` | Daftar/workspace lomba, khusus admin |
 
 Routing belum memakai React Router. `App.jsx` membaca `window.location.pathname`
 dan mendengarkan event `popstate`. Jika menambah halaman, tambahkan kondisi di
 `renderPage()`. Untuk deployment production, web server harus mengarahkan route
 frontend kembali ke `frontend/index.html`.
 
+Semua URL `/admin` dan `/admin/...` melewati satu guard role di `App.jsx`.
+Tamu dan sesi non-administrator diarahkan ke `/admin/login`; admin/superadmin
+yang membuka halaman login diarahkan ke `/admin`. Route operasional legacy
+`/riset/...` dan `/inovasi/input|info|edit` juga menerima kedua role
+administrator. `/admin/administrators` memiliki guard tambahan `superadmin`.
+Guard frontend hanya untuk UX; endpoint tetap diamankan middleware backend.
+
 ## 5. Alur Proposal Riset
 
 ```text
-Pengguna masuk atau daftar di /masuk
+Admin masuk melalui /admin/login
   -> token Sanctum disimpan di sessionStorage
   -> membuka Proposal Riset
   -> mengisi identitas, BAB I-III, koordinat, dan PDF
@@ -150,17 +207,17 @@ Pengguna masuk atau daftar di /masuk
   -> Kirim Proposal
        -> semua field dan PDF wajib
        -> status `submitted`
-       -> verification_status `pending`
        -> tampil di halaman Hasil Riset untuk semua orang
   -> pemilik dapat membuka Detail, Edit, PDF, atau Hapus
        -> Hapus selalu melewati dialog konfirmasi `DeleteProposalModal`
-  -> admin dapat menyetujui, menolak, atau mengembalikan proposal terkirim ke menunggu
-       -> `approved`, `rejected`, atau `pending`
-       -> catatan wajib jika ditolak
 ```
 
-Tanpa login, halaman Proposal Riset hanya menampilkan kartu ajakan masuk dan
-API menolak POST/PUT/DELETE dengan status 401.
+Alur proposal milik peneliti di atas adalah perilaku legacy yang sengaja tetap
+dipertahankan pada model, controller, policy, endpoint pemilik, dan data lama.
+Tidak ada lagi registrasi/login peneliti dari UI publik, sehingga akun peneliti
+baru tidak dapat memperoleh token dan route form tidak lagi ditautkan dari
+navbar. Token peneliti lama tetap tunduk pada policy kepemilikan sampai dicabut;
+jangan menghapus struktur ini tanpa migrasi produk dan data tersendiri.
 
 Saat edit, PDF lama tetap digunakan jika tidak ada file baru. Jika PDF diganti,
 backend menghapus file lama. Saat proposal dihapus, record MySQL dan PDF ikut
@@ -192,37 +249,59 @@ token Sanctum, bukan cookie stateful. Konsekuensinya:
 
 | Method | Endpoint | Fungsi |
 |---|---|---|
-| POST | `/api/auth/register` | Daftar, mengembalikan user dan token |
-| POST | `/api/auth/login` | Masuk, mengembalikan user dan token |
+| POST | `/api/auth/login` | Login admin/superadmin, mengembalikan user dan token |
 | POST | `/api/auth/logout` | Hapus token yang sedang dipakai |
 | GET | `/api/auth/me` | Data akun yang sedang masuk |
 
-Respons register/login berbentuk `data.user` dan `data.token`. Objek user memuat
-`id`, `name`, `email`, dan `role`. Password minimal 8 karakter dan wajib
-`password_confirmation` saat register. Pendaftaran publik selalu menghasilkan
-role `researcher`; field `role` dari request tidak boleh dipakai agar pengguna
-tidak dapat mendaftarkan diri sebagai admin.
+Endpoint `POST /api/auth/register` sudah dihapus dan harus tetap tidak tersedia.
+Login hanya menerbitkan token jika password benar, role adalah `admin` atau
+`superadmin`, dan `users.is_active === true`.
+Kredensial researcher yang valid mendapat 403 dengan pesan `Akun ini tidak
+memiliki akses administrator.` dan tidak menghasilkan token. Respons login
+administrator berbentuk `data.user` dan `data.token`; objek user memuat `id`,
+`name`, `email`, `role`, dan `is_active`. Akun nonaktif mendapat 403 dan tidak
+menerima token.
+
+Akun admin dibuat dari terminal backend dengan `php artisan admin:create`.
+Command meminta nama, email, kata sandi, dan konfirmasi secara interaktif;
+password memakai input tersembunyi, divalidasi minimal 8 karakter, disimpan
+melalui `Hash`, dan tidak pernah dicetak. Opsi `--name` dan `--email` tersedia,
+tetapi password sengaja tidak memiliki opsi CLI agar tidak bocor lewat process
+list atau shell history.
+
+Superadmin pertama dibuat melalui `php artisan admin:create-superadmin`.
+Command ini memakai perlindungan password yang sama dan merupakan satu-satunya
+jalur pembuatan superadmin; form web selalu memaksa akun baru menjadi `admin`.
 
 Sisi frontend:
 
 - `services/authStore.js` menyimpan token di `sessionStorage` dengan kunci
   `rumah-brida-auth` dan memberi tahu pelanggan lewat listener sederhana.
-- `hooks/useAuth.js` membaca store itu dengan `useSyncExternalStore`.
+- `hooks/useAuth.js` membaca store itu dengan `useSyncExternalStore` dan
+  menyediakan `isAdministrator` serta `isSuperAdmin`.
 - `services/api.js` menyisipkan header `Authorization: Bearer <token>` dan
   membersihkan sesi otomatis saat respons 401.
-- Efek pengambilan data di halaman riset memakai `token` sebagai dependency
-  supaya daftar dan detail ikut disegarkan setelah masuk atau keluar.
-- Kelas CSS khusus autentikasi di `App.css`: `.auth-card`, `.auth-tabs`,
-  `.auth-required`, `.header-account`, `.account-button`, `.profile-button`,
-  `.account-menu`, `.account-menu-link`, `.account-menu-logout`,
-  `.primary-form-link`.
+- `App.jsx` memegang guard role terpusat untuk semua route admin dan operasional.
+- `LoginPage.jsx` hanya memiliki field Email/Kata Sandi; tidak ada tab atau
+  state register. Login berhasil selalu menuju `/admin`.
+- Pengunjung hanya melihat `ThemeToggle` di sisi kanan navbar. Tidak ada tombol
+  Masuk, avatar, atau tautan panel pada situs publik.
+- Admin dan superadmin melihat `ThemeToggle`, avatar, dan chevron. Dropdown hanya berisi nama/
+  email, `Buka Panel Admin`, dan `Keluar`. Navbar admin menambahkan Riset dan
+  Inovasi, sedangkan item publik lainnya tetap sama.
+- Footer menyediakan tautan teks kecil `Login Admin` ke `/admin/login`.
+- `/admin` menampilkan modul Berita, Riset, Inovasi, dan Lomba. Superadmin juga
+  melihat modul `Kelola Administrator`; admin biasa tidak melihatnya.
 
-Saat belum masuk, `.account-button` pada header memakai ikon `UserRound` dari
-`lucide-react` diikuti teks `Masuk`. Tombol memakai `#0b2347`, tinggi 36px,
-radius 10px, padding horizontal 12px, font 14px/600, gap 7px, ikon 16px, tanpa
-shadow. Divider tipis sebelum area akun berjarak 16px dari tombol; fokus
-keyboard tetap memakai outline kuning. Jangan mengubah link `/masuk` atau logic
-`closeAll()`.
+Middleware `EnsureUserIsActive`, `EnsureUserIsAdmin`, dan
+`EnsureUserIsSuperAdmin` terdaftar sebagai alias `active`, `admin`, dan
+`superadmin` di `bootstrap/app.php`. Seluruh API berawalan `/api/admin/...`
+berada dalam group `auth:sanctum` + `active` + `admin`; endpoint pengelolaan
+administrator menambah middleware `superadmin`. Policy controller tetap
+dipertahankan sebagai lapisan otorisasi tambahan. Endpoint pemilik
+proposal/inovasi legacy tidak dihapus agar
+token lama dan relasi data tidak rusak, tetapi UI publik tidak lagi menyediakan
+cara memperoleh sesi researcher baru.
 
 `Lapor!` adalah item navigasi setelah `Lomba`, bukan tombol terpisah. Link
 mengarah ke `https://sp4n.lapor.go.id/` dengan `target="_blank"` dan
@@ -230,11 +309,11 @@ mengarah ke `https://sp4n.lapor.go.id/` dengan `target="_blank"` dan
 
 ### Theme toggle (light/dark)
 
-Navbar memuat `ThemeToggle.jsx` di dalam `.header-account`, tepat di kiri tombol
-`Masuk`/profil, dengan gap 11px. Toggle 40x40px (radius 12px) di desktop dan
+Navbar memuat `ThemeToggle.jsx` di dalam `.header-account`, tepat di kiri profil
+admin bila ada, dengan gap 11px. Toggle 40x40px (radius 12px) di desktop dan
 34x34px (radius 10px) di mobile; ikon `Sun`/`Moon` dari `lucide-react`
 bercross-fade dengan rotate ±90deg dan scale saat tema berpindah (300ms).
-Tombol tidak boleh lebih dominan dari tombol `Masuk`.
+Kontrol ini menjadi satu-satunya aksi akun yang terlihat untuk pengunjung.
 
 Arsitektur tema:
 
@@ -295,6 +374,8 @@ Laravel 13 tidak menyediakan limiter `api` bawaan, jadi tanpa definisi ini
 | `api` | 60 per menit per user/IP | Seluruh route API |
 | `proposal-write` | 10 per menit per user/IP | POST/PUT/DELETE proposal |
 | `news-write` | 20 per menit per user/IP | POST/PUT/DELETE berita admin |
+| `competition-write` | 15 per menit per user/IP | POST/PUT/DELETE lomba admin |
+| `competition-registration` | 5 per menit per IP | Pendaftaran peserta lomba publik |
 | `auth` | 5 per menit per email dan 20 per menit per IP | Register dan login |
 
 ## 7. API Proposal
@@ -315,13 +396,11 @@ http://127.0.0.1:8000/api
 | POST | `/api/research-proposals` | wajib | Tambah draft/submitted |
 | PUT | `/api/research-proposals/{id}` | wajib pemilik | Perbarui |
 | DELETE | `/api/research-proposals/{id}` | wajib pemilik | Hapus data dan PDF |
-| GET | `/api/admin/research-proposals?verification_status=pending` | wajib admin | Daftar proposal untuk verifikasi |
-| PATCH | `/api/admin/research-proposals/{id}/verification` | wajib admin | Setujui, tolak, atau kembalikan ke menunggu |
 
 Respons daftar selalu berbentuk `data` dan `pagination` (`current_page`,
 `last_page`, `per_page`, `total`). Item daftar adalah ringkasan tanpa BAB I-III;
 isi lengkap hanya tersedia di endpoint detail. Setiap objek juga memuat
-`pdf_url`, `can_manage`, dan `can_review`. Frontend memakai flag tersebut untuk
+`pdf_url` dan `can_manage`. Frontend memakai flag tersebut untuk
 menentukan aksi agar UI tidak menampilkan tindakan yang akan ditolak backend.
 
 ### Akses file PDF
@@ -351,10 +430,6 @@ Otorisasi berada di `ResearchProposalPolicy`:
 
 - `view`: proposal `submitted` boleh dibaca siapa pun; draft hanya pemilik.
 - `update` dan `delete`: hanya pemilik.
-- `viewAny` dan `review`: hanya role `admin`; admin tidak mendapat hak edit atau
-  hapus proposal peneliti. Admin dapat mengganti status proposal terkirim kapan
-  saja. Saat dikembalikan ke `pending`, catatan dan data peninjau sebelumnya
-  dibersihkan karena belum ada riwayat status terpisah.
 - Proposal lama dengan `user_id` NULL tidak dapat diubah atau dihapus lewat API
   oleh siapa pun.
 
@@ -386,9 +461,10 @@ Validasi saat `submit`:
 
 | Method | Endpoint | Auth | Fungsi |
 |---|---|---|---|
-| GET | `/api/news` | publik | Maksimal 3 berita terbit untuk carousel (`limit` opsional) |
+| GET | `/api/news?limit=3` | publik | Berita terbaru untuk layout editorial Beranda; `limit` dijepit 1-10 |
+| GET | `/api/news?page=1&per_page=9&search=...` | publik | Arsip berita terbit, paginated dan dapat dicari |
 | GET | `/api/news/{slug}` | publik | Detail berita terbit |
-| GET | `/api/admin/news` | wajib admin | Daftar semua berita termasuk draft |
+| GET | `/api/admin/news?page=1&status=draft&search=...` | wajib admin | Daftar berita paginated, filter status, pencarian, dan jumlah per status |
 | POST | `/api/admin/news` | wajib admin | Tambah berita dengan gambar opsional |
 | PUT | `/api/admin/news/{id}` | wajib admin | Edit berita; gambar lama dihapus saat diganti |
 | DELETE | `/api/admin/news/{id}` | wajib admin | Hapus berita dan gambar terkait |
@@ -410,9 +486,17 @@ aktif); aktifkan bila orientasi miring menjadi masalah.
 
 Perilaku yang harus dipertahankan:
 
-- `index` hanya mengembalikan `status = published`, diurutkan `latest('published_at')`,
-  dan mengosongkan kolom `content` supaya respons daftar tetap ringan. Parameter
-  `limit` dijepit ke rentang 1-10 agar tidak bisa dipakai menarik seluruh tabel.
+- `index` hanya mengembalikan `status = published`, diurutkan
+  `latest('published_at')` lalu `latest('id')`, dan mengosongkan kolom `content`
+  supaya respons daftar tetap ringan. Tanpa `page/search/per_page`, endpoint
+  memakai mode Beranda dengan `limit` 1-10 dan default 3. Jika salah satu
+  parameter arsip itu ada, respons memakai `data` dan `pagination`; `per_page`
+  default 9 dan maksimal 20. Pencarian mencakup judul, judul kartu, kategori,
+  dan ringkasan. Draft tidak pernah masuk kedua mode publik.
+- `adminIndex` memakai pagination default 10/maksimal 50, pencarian judul,
+  judul kartu, dan kategori, serta filter `status=draft|published`. Respons
+  juga memiliki `counts.total`, `counts.published`, dan `counts.draft` yang
+  selalu menghitung seluruh data, bukan hanya halaman/filter aktif.
 - `show` memakai `firstOrFail()` dengan filter `published`, jadi draft
   menghasilkan 404 untuk publik, bukan 403.
 - Slug dibuat dari `slug` bila dikirim, jika kosong dari `title`, lewat
@@ -420,8 +504,11 @@ Perilaku yang harus dipertahankan:
 - `published_at` diisi `now()` saat status `published` dan dikosongkan saat
   `draft`. Saat edit, `published_at` lama dipertahankan supaya tanggal terbit
   tidak bergeser setiap kali berita disunting.
-- Gambar opsional maksimal 5 MB per file. Saat diganti, file lama dihapus dari
-  disk `public`; saat berita dihapus, kedua gambar ikut dihapus.
+- Gambar opsional maksimal 5 MB per file. `image` adalah gambar/poster utama
+  untuk halaman detail, `homepage_thumbnail` adalah thumbnail landscape khusus
+  kartu Beranda, dan `secondary_image` adalah dokumentasi tambahan di isi
+  detail. Saat diganti, file lama dihapus dari disk `public`; saat berita
+  dihapus, ketiga gambar ikut dihapus.
 - Frontend mengirim edit lewat `POST` dengan `_method=PUT`, sama seperti proposal.
 
 Otorisasi berada di `NewsPolicy`. `viewAny`, `create`, `update`, dan `delete`
@@ -437,6 +524,42 @@ Hapus berita dari `/admin/berita` memakai dialog in-app `DeleteNewsModal`
 dialog yang menampilkan judul berita, dan DELETE dikirim setelah tombol
 `Hapus Berita` ditekan. Halaman memakai guard `if (deletingId !== null) return`
 agar klik ganda tidak mengirim DELETE dua kali.
+
+## 7C. API Lomba
+
+| Method | Endpoint | Auth | Fungsi |
+|---|---|---|---|
+| GET | `/api/competitions?page=1&per_page=9` | publik | Daftar lomba paginated; mendukung `search`, `status`, dan `type` |
+| GET | `/api/competitions/options` | publik | Jenis lomba dan lomba yang status/periode pendaftarannya aktif |
+| POST | `/api/competitions/{id}/registrations` | publik | Mengirim data pendaftaran peserta |
+| GET | `/api/competitions/{id}/guideline` | publik | Menampilkan Juknis PDF dari storage privat |
+| GET | `/api/admin/competitions` | wajib admin | Daftar pengelolaan, filter, pagination, dan jumlah per status |
+| POST | `/api/admin/competitions` | wajib admin | Tambah lomba dan Juknis |
+| PUT | `/api/admin/competitions/{id}` | wajib admin | Edit lomba; Juknis baru opsional |
+| DELETE | `/api/admin/competitions/{id}` | wajib admin | Hapus lomba dan Juknis |
+
+Payload lomba berisi `code`, `name`, `description`, `opening_date`,
+`closing_date`, `status` (`open|closed`), `type` (`Lomba untuk ASN`, `Lomba
+untuk OPD`, atau `Lomba untuk Masyarakat`), dan `guideline`. Kode wajib unik,
+tanggal penutupan tidak boleh sebelum pembukaan, dan Juknis wajib berupa PDF
+maksimal 10 MB saat create. Frontend mengirim edit multipart melalui `POST`
+dengan `_method=PUT`, seperti modul upload lain.
+
+Juknis disimpan di disk `local` pada
+`storage/app/private/competition-guidelines`; jangan dipindahkan ke disk publik.
+Endpoint file melakukan streaming dengan header CSP. Saat file diganti atau
+record dihapus, file lama ikut dihapus. `CompetitionPolicy` membatasi seluruh
+aksi admin kepada role `admin` dan `superadmin`; daftar serta Juknis tetap dapat
+dibaca publik.
+
+Form publik memakai dua dropdown berjenjang: `type` memilih jenis lomba dan
+`competition_id` memilih nama lomba aktif pada jenis tersebut. Payload peserta
+yang benar-benar disimpan hanya `name`, `nik`, `address`, dan `product_name`;
+jenis serta nama lomba diambil dari relasi competition agar tidak dapat
+dipalsukan oleh request. NIK wajib tepat 16 digit dan unik per lomba. Endpoint
+menolak lomba berstatus tutup, belum memasuki tanggal pembukaan, atau telah
+melewati tanggal penutupan. Endpoint publik ini dibatasi 5 request per menit
+per IP.
 
 ## 8. Database
 
@@ -458,24 +581,46 @@ pdf_path
 pdf_original_name
 status: draft | submitted
 verification_status: pending | approved | rejected
-review_note: nullable, wajib saat rejected
+review_note: nullable
 reviewed_by_id: nullable, foreign key ke users, nullOnDelete
 reviewed_at: nullable
 submitted_at
 created_at, updated_at
 ```
 
+Empat kolom verifikasi di atas adalah struktur legacy dari migration lama.
+Fitur verifikasi sudah dihapus dari frontend, route API, controller, policy,
+dan respons proposal pada 27 September 2026. Kolom tidak di-drop agar migration
+dan data lama tetap kompatibel; jangan menghidupkan workflow verifikasi hanya
+karena kolom tersebut masih ada.
+
 Tabel pendukung: `users` dan `personal_access_tokens` (Sanctum). Kolom
-`users.role` memiliki default `researcher`; nilai yang disiapkan adalah
-`researcher` dan `admin`. Factory menyediakan state `User::factory()->admin()`
-untuk test atau seeder. Dashboard `/admin/proposal` dan policy `viewAny`/`review`
-sudah tersedia; hanya akun dengan role `admin` yang dapat menggunakannya.
+`users.role` memiliki default `researcher`; nilai yang digunakan adalah
+`researcher` (legacy), `admin`, dan `superadmin`. Kolom boolean
+`users.is_active` default `true` menentukan apakah administrator boleh login
+dan menggunakan endpoint terlindungi. Factory menyediakan state `admin()`,
+`superAdmin()`, dan `inactive()`. Helper model `isAdministrator()` menerima
+admin/superadmin; `isSuperAdmin()` hanya menerima superadmin.
 
 Tabel `news` menyimpan `user_id` (nullable, nullOnDelete), `title`, `card_title`,
 `slug` unik, `category`, `summary`, `content`, `image_path`,
-`secondary_image_path`, `status` (`draft|published`, terindeks), `published_at`
+`homepage_thumbnail_path`, `secondary_image_path`, `status`
+(`draft|published`, terindeks), `published_at`
 (nullable, terindeks), dan timestamps. `NewsFactory` default menghasilkan berita
 `published` dengan state `News::factory()->draft()` untuk berita draft.
+
+Tabel `competitions` menyimpan `user_id` nullable, `code` unik, `name`,
+`description`, `opening_date`, `closing_date`, `status`, `type`,
+`guideline_path`, `guideline_original_name`, dan timestamps. Migration
+`2026_09_29_000000_create_competitions_table.php` telah diterapkan pada database
+development tanggal 29 September 2026.
+
+Tabel `competition_registrations` menyimpan `competition_id` dengan
+`cascadeOnDelete`, `name`, `nik`, `address`, `product_name`, dan timestamps.
+Kombinasi `competition_id + nik` unik sehingga satu NIK tidak dapat mendaftar
+dua kali pada lomba yang sama. Migration
+`2026_09_29_120000_create_competition_registrations_table.php` sudah diterapkan
+pada database development tanggal 29 September 2026.
 
 `user_id` dibuat nullable supaya proposal yang dibuat sebelum autentikasi ada
 tetap tersimpan. Proposal seperti itu hanya bisa dibaca lewat API.
@@ -491,6 +636,25 @@ melakukan pengujian. Gunakan record dengan judul unik dan bersihkan hanya record
 uji yang dibuat sendiri.
 
 ## 9. Aset dan Tampilan
+
+### Wajib membaca skill desain
+
+Sebelum mengerjakan desain, redesign, atau perubahan visual frontend apa pun,
+agent WAJIB membaca seluruh instruksi yang relevan di:
+
+```text
+$CODEX_HOME/skills/taste-skill/SKILL.md
+```
+
+Pada mesin development saat ini file tersebut berada di
+`C:\Users\Esar Fauzan\.codex\skills\taste-skill\SKILL.md` dan terdaftar sebagai
+skill `design-taste-frontend`. Aturan ini mencakup perubahan layout, komponen,
+warna, tipografi, spacing, responsive behavior, animasi, navbar, halaman,
+form, tabel, dan elemen visual lain. Gunakan hanya panduan skill yang relevan
+dengan konteks pekerjaan, lalu tetap utamakan instruksi eksplisit pengguna,
+design system Rumah BRIDA, aksesibilitas, dan pola codebase yang sudah ada.
+Perubahan backend murni yang tidak memengaruhi tampilan tidak wajib membaca
+skill tersebut.
 
 Semua gambar berada di `frontend/src/assets/image/`:
 
@@ -518,20 +682,15 @@ Garis kuning `var(--yellow)` dibuat dengan pseudo-element `::after`, menggunakan
 `transform: scaleX()` dan transition 240ms; garis tampil untuk menu aktif dan
 juga muncul halus saat hover atau fokus keyboard pada menu lain. Status aktif
 ditentukan `Header.jsx` dari `window.location.pathname` dan hash: Beranda untuk
-`/` atau `#beranda`, Inovasi untuk `#inovasi`, Lomba untuk `#lomba`, dan Riset
+`/` atau `#beranda`, Inovasi untuk `#inovasi`, Lomba untuk `/lomba/...` dan
+`/admin/lomba`, serta Riset
 untuk seluruh route `/riset/...`. Jangan gunakan selektor `li:first-child`
 untuk indikator aktif, karena akan membuat Beranda selalu aktif.
 
-`NewsSection.jsx` memakai carousel pratinjau tanpa dependency tambahan. Semua
-item `newsItems` dirender dan diberi kelas posisi `is-previous`, `is-active`,
-`is-next`, atau `is-hidden` berdasarkan `activeIndex`. Pada desktop, kartu aktif
-berada di tengah dan kartu sebelum/berikutnya terlihat sebagian dengan opacity
-lebih rendah; perpindahan memakai transform CSS. Pada layar maksimal 960px,
-pratinjau samping disembunyikan dan hanya kartu aktif yang ditampilkan agar
-ukuran konten tetap nyaman. Link di kartu yang bukan aktif tidak dapat difokuskan.
-Tombol slider memakai `.slider-chevron` CSS, bukan karakter teks; hover/focus
-memberi perpindahan kecil sesuai arah chevron dan latar tombol kuning. Aturan
-`prefers-reduced-motion` menonaktifkan transform tombol dan chevron tersebut.
+`NewsSection.jsx` memakai layout editorial dari maksimal tiga berita terbit.
+Item pertama menjadi berita utama, dua berikutnya pendamping; mobile disusun
+vertikal. Carousel lama tidak lagi digunakan. Lihat bagian 12D untuk state
+loading/error, fallback gambar, dan komponen layanan terbaru.
 
 ### Tipografi
 
@@ -610,15 +769,15 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
   80px, berlaku di SEMUA route. Di puncak, header memakai style sticky terang
   standar (`.site-header`): latar `--header-bg` 97%, tinggi 76px, garis bawah
   tipis, logo 58px. Setelah discroll, `.is-scrolled` memorph header menjadi
-  navbar kaca mengambang (glass `color-mix(var(--surface) 68%, transparent)`,
-  blur 18px saturate 145%, radius 30px, width min(82vw, 1200px),
+  navbar kaca mengambang (glass `color-mix(var(--surface) 85%, transparent)`,
+  blur 22px saturate 145%, radius 30px, width min(92%, 1200px),
   translateY(8px), shadow lembut) TANPA meninggalkan `position: sticky` — slot
   header tetap di alur dokumen sehingga tidak ada layout shift, tinggi tetap
-  76px, logo menyusut ke 48px. Kekentalan glass adalah 55% dengan blur 22px
-  (pilihan eksplisit pemilik; sebelumnya 68%/18px). Kontras teks nav di atas
-  konten terang terukur 10.46:1; saat melayang di atas hero gelap beranda
-  estimasi turun di bawah 4.5:1 sesaat, jadi jika keterbacaan terasa kurang,
-  naikkan ke 65% sebelum menambah override warna. Latar glass memakai
+  76px, logo menyusut ke 48px. Pembaruan desain 25 September menaikkan glass
+  dari 55% ke 85% untuk keterbacaan, dengan transisi ukuran 320ms. Nilai
+  lebar normal eksplisit 100% membuat penyusutan tetap berpusat. Pada tablet
+  761-1100px, lebar floating menjadi calc(100% - 24px) dan jarak menu dipadatkan.
+  Latar glass memakai
   `--surface` sehingga di
   dark mode otomatis menjadi kaca gelap; tinta nav TIDAK dioverride (warna
   standar header sudah terbaca di atas glass) — jangan menambahkan warna navy
@@ -647,13 +806,15 @@ Submenu hanya terbuka lewat klik, bukan hover atau focus.
 Navbar tergulir pada mobile memakai width calc(100% - 24px) dan radius 24px;
 navigasi tetap melalui hamburger, panel menu menempel di bawah header
 (`top: 100%`) dengan surface standar. Di breakpoint mobile, area
-akun desktop disembunyikan agar tidak ada kontrol yang keluar viewport. Akses
-tema, Masuk, Dashboard Admin (untuk admin), Draft Saya, dan Keluar ditampilkan
-di dalam panel hamburger lewat `.mobile-account-actions`, memakai fungsi auth
-dan logout yang sama. Tombol hamburger diposisikan absolut pada sisi kanan
+akun desktop disembunyikan agar tidak ada kontrol yang keluar viewport.
+Pengunjung hanya melihat kontrol tema di `.mobile-account-actions`; admin juga
+melihat `Panel Admin` dan `Keluar`. Tidak ada Masuk, Draft Saya, atau menu
+operasional di navbar. Tombol hamburger diposisikan absolut pada sisi kanan
 header mobile agar tidak terdorong keluar oleh lebar konten. Hero Beranda
-memiliki tinggi minimum satu viewport dan berada dari y=0 di belakang header;
-konten diberi ruang atas, sedangkan
+berada setelah navbar dalam alur dokumen. Tinggi minimum dibatasi 640px
+(mobile 560px) atau sisa 100svh dikurangi tinggi navbar dan 112px agar awal
+berita terlihat; konten dapat menambah tinggi bila diperlukan. Padding konten
+64px vertikal pada desktop dan 48px pada mobile, sedangkan
 `Background.jpeg` diberi overlay navy dari kiri ke kanan tanpa blur.
 `prefers-reduced-motion` juga memendekkan transisi header.
 
@@ -799,7 +960,7 @@ Perubahan berita harus diuji minimal untuk daftar publik (hanya `published`,
 `content` kosong, `limit` dijepit), detail publik termasuk draft yang 404,
 penolakan tamu dan peneliti, create dengan slug otomatis serta gambar, draft
 tanpa `published_at`, validasi dan slug duplikat, update yang mempertahankan
-gambar lama lalu menggantinya, delete beserta kedua gambar, daftar admin
+gambar lama lalu menggantinya, delete beserta ketiga gambar, daftar admin
 yang memuat draft, serta optimasi gambar (JPEG besar jadi WebP ≤1600px, gambar
 kecil dienkode ulang tanpa resize, berkas tidak terproses tersimpan apa adanya).
 Test optimasi melewatkan diri sendiri (`markTestSkipped`) bila ekstensi GD tidak
@@ -809,16 +970,25 @@ berita ada di disk `public`, berbeda dengan PDF proposal.
 ## 12. Batasan dan Prioritas Lanjutan
 
 Autentikasi, otorisasi, rate limiting, akses PDF privat, halaman Draft Saya,
-dashboard verifikasi admin, dialog konfirmasi hapus proposal dan berita, serta
+dialog konfirmasi hapus proposal dan berita, serta
 berita dari database dengan kelola berita admin sudah tersedia. Sisa prioritas, diurutkan
 dari yang paling murah dan paling mendesak:
 
-1. Perbaiki lint lama pada `InovasiInputPage.jsx` (variabel tidak dipakai,
-   setState langsung dalam effect, serta komponen didefinisikan saat render).
-   Pagination dan pencarian/filter server-side daftar Inovasi sudah tersedia;
-   lanjutkan cakupan test untuk tambah/edit/hapus dan upload PDF Inovasi.
-2. Bangun halaman Lomba. Link Lomba masih `#lomba`, sehingga dari subhalaman
-   hanya mengubah hash halaman tersebut.
+1. Cakupan integrasi tambah/edit/hapus dan penggantian upload PDF Inovasi pada
+   backend SUDAH LENGKAP (26 September): test baru di `InnovationApiTest`
+   mencakup create dengan kedua PDF (`Storage::fake('public')`), validasi error
+   (field wajib dan file non-PDF), update tanpa mengganti PDF (file lama dan
+   nama asli bertahan), update mengganti PDF via `POST` + `_method=PUT` (file
+   lama dihapus), delete beserta kedua PDF, penolakan tamu (401) dan user lain
+   (403), serta kepemilikan record. Verifikasi: Pint 53 file lulus, backend
+   57 test/329 assertion lulus, `npm run lint` bersih, build Vite sukses
+   (1925 modul). Catatan: `pint` juga memperbaiki gaya lama pada migration
+   `2026_09_15_000000_create_innovations_table` (line ending/braces, tanpa
+   perubahan isi).
+
+2. Modul lomba dan formulir pendaftaran peserta publik sudah tersedia.
+   Pengembangan lanjutan yang belum ada adalah halaman admin untuk melihat,
+   mencari, atau mengekspor data peserta.
 3. Lapor sudah diarahkan ke SP4N LAPOR; formulir internal bukan fitur yang
    tersedia saat ini. Pertimbangkan React Router untuk navigasi internal.
 
@@ -976,6 +1146,7 @@ di atas berlaku untuk versi sebelum commit ini.
 | GET | `/api/innovations/options` | Publik, opsi klasifikasi |
 | GET | `/api/innovations` | Publik, daftar terbaru, 10 record per halaman |
 | GET | `/api/innovations/{id}` | Publik, detail |
+| GET | `/api/innovations/{id}/pdf/{profile\|report}` | Publik, streaming PDF dengan header CORS |
 | POST | `/api/innovations` | Login, tambah milik akun aktif |
 | PUT | `/api/innovations/{id}` | Pemilik, edit |
 | DELETE | `/api/innovations/{id}` | Pemilik, hapus record dan kedua PDF |
@@ -988,17 +1159,20 @@ tulis khusus Inovasi selain limiter API global.
 
 PDF inovasi disimpan di disk `public`, folder `innovations/profile` dan
 `innovations/report`; berbeda dari PDF proposal riset yang privat. Berkas lama
-dihapus saat diganti. `storageUrl()` menyusun URL `/storage/...` memakai origin
-backend dari `VITE_API_URL` (fallback `http://127.0.0.1:8000/api`). File-file
-ini dapat dibuka publik dan memerlukan `php artisan storage:link`.
+dihapus saat diganti. `storageUrl()` masih menyusun URL `/storage/...` memakai
+origin backend dari `VITE_API_URL` (fallback `http://127.0.0.1:8000/api`) untuk
+file umum. UI PDF inovasi memakai endpoint streaming berdasarkan ID record agar
+preview lintas origin mendapat header CORS. File tetap publik dan symlink
+`php artisan storage:link` masih diperlukan bila URL `/storage` dipakai.
 Jalankan `php artisan migrate` bila migration baru belum diterapkan.
 `backend/.env.example` kini memakai `DB_DATABASE=rumah_brida` (huruf kecil);
 file `.env` lokal tidak diubah otomatis oleh pull.
 
 ### Perubahan tampilan
 
-- Navbar: Inovasi memiliki submenu Input Inovasi dan Info. Submenu Riset dan
-  Inovasi menampilkan ikon, deskripsi, dan animasi hover. Sebagian style submenu
+- Navbar: Inovasi memiliki submenu Input Inovasi dan Info. Submenu Riset,
+  Inovasi, dan Info Publik menampilkan judul serta deskripsi tanpa kotak ikon
+  atau garis aksen dekoratif. Sebagian style submenu
   ditulis dalam `submenuStyles` di `Header.jsx`, selain aturan di `App.css`.
   Menu aktif mengenali route `/inovasi/...` dan `/info-publik`.
 - Dark mode: navbar memakai aset baru `src/assets/image/logo-fix-dark.png`
@@ -1016,6 +1190,547 @@ file `.env` lokal tidak diubah otomatis oleh pull.
   drag-and-drop PDF, dan tampilan file terpilih. Ajakan login juga didesain ulang.
 - `App.css` menambah aturan responsif, termasuk breakpoint >=1600px untuk
   container, heading hero, logo, dan tinggi header.
+
+## 12C. Perapian Desain 25 September 2026
+
+Pembaruan ini menerapkan rekomendasi audit taste-skill dengan mempertahankan
+identitas navy, putih, kuning, font self-host, dan aset asli. Bagian 12B di atas
+merupakan riwayat; detail visual terbaru mengikuti bagian ini.
+
+- Hero beranda lebih pendek, padding atas/bawah seimbang, ukuran heading
+  mengikuti breakpoint tetap (bukan vw), dan awal berita terlihat di viewport
+  pertama. Floating navbar memakai glass 85% dan transisi 320ms, tetap sticky.
+- Token `--page-banner-start` dan `--page-banner-end` memisahkan warna latar
+  header layanan dari token teks navy yang menjadi terang di dark mode.
+  Dipakai pada form riset/inovasi, daftar riset/inovasi, dan Info Publik.
+- Tabel Hasil Riset, Info Inovasi, Dokumen Inovasi, dan Hasil Riset Publik
+  memakai kelas `responsive-records`. Pada <=760px, baris disusun vertikal
+  dengan label OPD/peneliti/berkas tanpa menduplikasi data atau aksi. Header
+  tabel tetap tersedia bagi pembaca layar; role tabel/baris/sel dipertahankan.
+  Desktop tetap memakai tabel, pagination dan pencarian API tetap sama.
+- Teks isi tabel 14px, institusi 13px, tombol file 12px desktop/13px mobile.
+  Tombol edit/hapus 36px desktop dan area sentuh aksi minimal 44px mobile.
+  Efek kuning tetap hanya untuk hover/focus berkas tersedia, dengan tinta
+  `--on-yellow` gelap di kedua tema. Fokus keyboard mendapat outline jelas.
+- Form riset/inovasi memakai radius kontrol/panel 8px dan shadow ringan.
+  Bingkai tambahan BAB riset dihilangkan; judul bagian tetap di tengah.
+  Input 15px desktop/16px mobile. Navigasi bagian inovasi pada mobile memakai
+  grid dua kolom; posisi sticky desktop memperhitungkan tinggi navbar.
+- Submenu dan judul `Info Peneliti` menjadi `Dokumen Inovasi` karena isinya
+  inovasi/OPD dan PDF profil/laporan. Route `/info-publik/peneliti` dan alias
+  `/info-publik` tetap berlaku. Deskripsi Info Inovasi tidak lagi mengklaim
+  data sudah terverifikasi karena alur verifikasi inovasi belum tersedia.
+- Aturan visual bersama berada di akhir `App.css` agar ukuran dan state tetap
+  konsisten dengan CSS halaman yang masih dirender melalui elemen style.
+
+Verifikasi historis pada tahap 12C: build frontend dan lint komponen yang
+disentuh berhasil. Error lint lama `InovasiInputPage.jsx` yang saat itu masih
+tersisa sudah diselesaikan pada modernisasi bagian 12D.
+Pemeriksaan Chrome headless/CDP memakai respons API fixture tanpa menulis
+database: beranda, empat daftar, dan kedua form diuji pada 1440px, 390px,
+dan 320px dalam light/dark. Hero/CTA dan awal berita terlihat, logo termuat,
+tidak ada overflow halaman, baris mobile tersusun vertikal, dan area sentuh
+aksi 44px. Pemeriksaan tambahan pada 768/1024/1920px memastikan navbar tamu
+tetap muat dengan label satu baris. Pencarian kosong, pagination ke baris 11,
+buka/batal dialog hapus, submenu mobile, tinta gelap saat hover kuning pada
+dark mode, dan reduced-motion juga lulus. Screenshot diperiksa secara visual.
+Ini verifikasi frontend dengan data uji, bukan pengujian ulang penyimpanan API.
+Dev server yang sudah berjalan tersedia di `http://localhost:5173`.
+
+## 12D. Modernisasi Layanan 26 September 2026
+
+Bagian ini menggantikan rincian visual historis 12B/12C yang berbeda.
+Identitas navy-putih-kuning, font, aset asli, navbar, auth, dan izin pemilik
+dipertahankan. Tidak ada dependency atau migration baru.
+
+- Hero memakai judul Rumah BRIDA, pengantar pendek, Ajukan Proposal dan
+  Jelajahi Inovasi. Setelah hero ada akses Riset Daerah, Daftarkan Inovasi,
+  dan Dokumen Publik, bukan kartu promosi terpisah.
+- Berita terbaru tetap dari API database, tetapi carousel diganti layout
+  editorial satu berita utama + dua pendamping. Ada state loading, kosong,
+  retry saat gagal, serta placeholder jujur untuk berita tanpa gambar.
+- Empat halaman daftar dan kedua form memakai ServicePageHeader: breadcrumb,
+  judul ringkas, deskripsi, total bila tersedia, dan aksi utama yang relevan.
+  Header memakai surface tema, bukan banner navy besar.
+- FilterSummary menampilkan jumlah hasil, filter pencarian/tahun yang dapat
+  dihapus satu per satu, dan reset. Pencarian tetap server-side dengan
+  debounce; perubahan filter kembali ke halaman pertama.
+- Tombol PDF pada empat daftar dan berkas lama di form membuka dialog
+  pratinjau. Ada nama berkas, tautan tab baru, unduh blob PDF, loading/error,
+  retry, dan pesan URL kedaluwarsa. URL signed riset tetap dipakai apa adanya.
+  Viewer mengikuti kemampuan PDF browser; tombol tab baru tetap tersedia.
+  Escape dari kontrol dialog menutup dan mengembalikan fokus. Viewer PDF
+  native dapat menangani tombol keyboard sendiri saat fokus berada di dalamnya.
+- PDF inovasi kini dibaca lewat GET /api/innovations/{id}/pdf/{profile|report}
+  untuk mendapatkan CORS Laravel. File tetap publik; path diambil hanya dari
+  record, bukan input path pengguna, dengan 404 untuk file kosong/hilang.
+  Ini diperlukan karena file statis /storage melewati middleware CORS pada
+  server development PHP. storageUrl tetap dipertahankan untuk pemakaian lain.
+- Form riset dan inovasi menampilkan wajib/opsional, kelengkapan per bagian,
+  validasi sebelum review, serta ringkasan dengan tombol kembali mengedit.
+  POST hanya dilakukan setelah konfirmasi; ada guard klik ganda. Simpan Draft
+  riset tetap dapat dilakukan tanpa semua kolom terisi.
+- PDF baru tidak diwajibkan saat edit jika berkas lama masih ada. Inovasi
+  tetap mengizinkan registrasi, OPD, tanggal, dan dokumen kosong. Progress
+  utama inovasi menghitung lima kolom wajib, bukan seluruh kolom opsional.
+- Ikon form inovasi memakai lucide; upload bersama menggantikan komponen
+  bersarang yang sebelumnya dibuat ulang pada setiap render. Tombol hapus
+  upload kini native button dan tidak mengakses input yang sudah di-unmount.
+- Footer menjadi tiga kelompok: identitas, tautan layanan, dan kontak.
+- CSS baru di ServiceDesign.css diimpor setelah App.css. Semua permukaan
+  memakai token tema; mobile mempertahankan tabel stacked dari 12C.
+- ESLint mengabaikan folder *.local (profil browser/artifak audit lokal,
+  juga diabaikan Git), bukan mengabaikan kode aplikasi.
+
+Verifikasi frontend: build/lint, unit test validasi
+(`node --test tests/submission.test.mjs`), dan audit Chrome headless/CDP.
+Audit memakai fixture pada desktop/mobile dalam light/dark, termasuk
+pencarian/reset, pagination, pratinjau PDF, URL kedaluwarsa, kembali mengedit,
+konfirmasi sekali, dan error validasi server tanpa kehilangan isian.
+Tidak ada pengiriman data uji ke database pengguna. Endpoint PDF diuji dengan
+SQLite in-memory dan fake storage pada InnovationApiTest.
+Dev server: http://localhost:5173.
+
+## 12E. Arsip dan Kelola Berita 26 September 2026
+
+- Beranda sengaja tetap menampilkan tiga berita terbaru agar ritme editorial
+  ringkas. Tautan `Lihat semua berita` menuju `/berita`; berita baru berstatus
+  `published` otomatis masuk arsip, jadi tidak hilang walau bukan tiga terbaru.
+- `NewsArchivePage.jsx` menampilkan seluruh berita terbit dalam grid responsif,
+  pencarian server-side debounce 300ms, total hasil, state loading/kosong/error,
+  dan pagination 9 item per halaman. Kartu memakai gambar unggahan bila ada dan
+  placeholder jujur bila tidak ada. Detail berita kembali ke `/berita` melalui
+  breadcrumb, dan footer juga menyediakan tautan ke arsip.
+- `/admin/berita` menjadi workspace dua area: editor terstruktur dan daftar
+  operasional. Semua input memiliki label dan penanda wajib/opsional, ringkasan
+  memiliki penghitung karakter, gambar memiliki pratinjau, serta status draft
+  menjelaskan bahwa konten belum publik.
+- Daftar admin menampilkan jumlah total/terbit/draft, pencarian, filter status,
+  pagination, thumbnail, status, kategori, dan aksi ikon lihat/edit/hapus.
+  Menghapus tetap memakai `DeleteNewsModal`; edit multipart tetap dikirim lewat
+  POST dengan `_method=PUT`. Tidak ada dependency atau migration baru.
+- CSS arsip dan admin berada di `ServiceDesign.css`, memakai token light/dark,
+  radius maksimal 8px, fokus keyboard, target sentuh 44px pada mobile, dan
+  reduced-motion untuk animasi gambar/skeleton.
+
+Verifikasi perubahan berita: Pint lulus; backend 53 test/287 assertion lulus;
+`npm run lint` bersih; build Vite sukses (1923 modul); unit test frontend 4/4
+lulus. Endpoint nyata mengembalikan 5 berita pada arsip saat diverifikasi.
+Tampilan `/berita` diperiksa melalui screenshot Chrome headless desktop dan
+breakpoint kecil; grid, gambar/placeholder, total, dan state hasil tampil.
+
+## 12F. Pemisahan Navigasi Publik dan Admin 26 September 2026
+
+Catatan historis: perilaku `adminOnly` pada navbar di bagian ini telah
+digantikan sepenuhnya oleh 12L.
+
+- Copy hero dikembalikan ke versi `Portal Resmi`, `Selamat Datang di Rumah
+  Brida`, serta deskripsi pusat informasi dan layanan BRIDA. Layout, gambar,
+  warna, dan tipografi hero tidak dirombak.
+- Dua CTA hero kini bersifat publik: `Lihat Hasil Riset` menuju
+  `/info-publik/hasil-riset` dan `Jelajahi Inovasi` menuju
+  `/info-publik/peneliti`.
+- Tiga akses cepat di bawah hero juga tidak lagi membuka form operasional:
+  masing-masing menuju Hasil Riset publik, Dokumen Inovasi, dan arsip Berita.
+  Tautan layanan footer diselaraskan ke route publik yang sama.
+- `Header.jsx` menandai menu `Riset` dan `Inovasi` sebagai `adminOnly`, lalu
+  menyaringnya melalui helper `isAdministrator(user)`. Pengunjung dan akun non-
+  administrator hanya melihat Beranda, Info Publik, Lomba, dan Lapor pada navigasi.
+- Tautan `Dashboard Admin` dihapus dari menu akun desktop dan mobile.
+  `Kelola Berita` tetap berada di menu akun admin.
+- Perubahan ini mengatur navigasi frontend. Kontrak API dan policy pemilik
+  lama tidak diubah; endpoint publik tetap publik dan endpoint tulis tetap
+  mengikuti autentikasi/policy yang sudah terdokumentasi pada bagian API.
+
+Verifikasi: `npm run lint` bersih dan `npm run build` sukses dengan 1923 modul.
+Beranda tamu diperiksa melalui Chrome headless pada 1440x900: copy hero, kedua
+CTA, tiga akses publik, dan navbar tanpa Riset/Inovasi tampil sesuai tujuan.
+
+## 12G. Perapian Beranda 26 September 2026
+
+Audit `design-taste-frontend` membaca Beranda sebagai portal layanan publik
+dengan variance 3, motion 2, dan density 5. Struktur, copy, aset hero, route,
+data berita, auth, dan theme tidak diubah; perbaikan berfokus pada hierarki dan
+ritme visual.
+
+- Copy hero dibungkus `.hero-copy` dengan lebar baca stabil. Heading desktop
+  turun dari 72px menjadi 58px, intro dari 18px menjadi 16px, tinggi hero dari
+  maksimum 580px menjadi 520px, dan padding dipadatkan secara proporsional.
+  Mobile memakai heading 36px (34px pada <=360px), intro 15px, serta hero
+  maksimum 480px. Ukuran tidak memakai skala font berbasis viewport.
+- Kicker diberi garis kuning pendek sebagai jangkar visual. CTA tetap dua,
+  tetapi tinggi 46px, tipografi 13px, gap lebih rapat, dan tombol sekunder
+  memakai border/transparansi lebih tenang agar hierarki tombol jelas.
+- Akses layanan tetap berupa full-width band, bukan kumpulan kartu. Setiap ikon
+  kini berada pada alas 38px, padding baris dipadatkan, deskripsi diperkecil,
+  dan divider tetap memisahkan tiga tujuan. Mobile menyusun baris 44px+ dengan
+  divider horizontal dan tidak menambah card bersarang.
+- Layout berita tetap editorial satu utama + dua pendamping. Kolom menjadi
+  1.15/0.85, gambar utama lebih pendek (`16 / 8.5`), item pendamping memakai
+  thumbnail 116px, ringkasan dua baris, dan hanya berita pendamping kedua yang
+  mendapat divider. Pada mobile grid kembali satu kolom dan `grid-row` utama
+  direset agar tidak menghasilkan ruang kosong.
+- Fokus keyboard pada CTA dan akses layanan memakai outline kuning. Transisi
+  tetap sederhana dan aturan reduced-motion yang sudah ada dipertahankan.
+
+Verifikasi: `npm run lint` bersih dan `npm run build` sukses (1923 modul).
+Screenshot Chrome headless 1440x1200 dan viewport kecil 500x1000 diperiksa:
+hero, tombol, akses layanan, heading berita, gambar utama, serta dua berita
+pendamping tidak tumpang tindih dan tidak memotong teks.
+
+## 12H. Redesign Modern Beranda 26 September 2026
+
+Bagian ini menggantikan detail hero dan akses layanan pada 12F/12G. Audit
+`design-taste-frontend` memakai arah civic-editorial dengan variance 5,
+motion 4, dan density 4. Tidak ada dependency, route data, atau perubahan API.
+
+- Duplikasi empat CTA publik dihapus. Hero hanya memiliki satu CTA orientasi,
+  `Jelajahi Layanan`, yang menuju anchor `#layanan-publik`. Tujuan sebenarnya
+  hanya muncul sekali pada bagian Informasi Publik: Hasil Riset, Dokumen
+  Inovasi, dan Berita & Kegiatan.
+- Hero memakai foto gedung yang sama sebagai pseudo-element full-bleed. Gambar
+  bergerak sangat lambat dengan scale/pan 18 detik, sedangkan kicker, heading,
+  intro, dan CTA masuk bertahap 650ms. Overlay navy tetap menjaga kontras teks;
+  hero tidak memakai card, blur, atau dekorasi gradient tanpa gambar.
+- Bagian akses publik memakai grid 220px + tiga tujuan pada desktop. Heading
+  `Akses Cepat / Informasi publik` bukan tautan. Tujuan dipisahkan divider,
+  memiliki ikon 40px, underline kuning saat hover/focus, dan panah bergerak
+  ringan ke kanan atas. Pada <=960px heading pindah ke atas; <=760px tujuan
+  menjadi tiga baris penuh tanpa card bersarang.
+- CTA hero memiliki hover naik 2px dan ikon turun ringan. Thumbnail berita
+  memakai zoom 1.035 pada hover. Anchor menggunakan smooth scroll dengan
+  `scroll-margin-top` agar tidak tertutup navbar.
+- `prefers-reduced-motion: reduce` mematikan background drift, entrance,
+  smooth scroll, hover transform, dan transition baru. Konten langsung tampak
+  tanpa opacity awal pada mode tersebut.
+
+Verifikasi: `npm run lint` bersih dan `npm run build` sukses (1923 modul).
+Screenshot Chrome headless diperiksa pada 1440x1200, 1024x1000, dan 500x1000;
+hero, satu CTA, grid akses publik, navbar, serta awal berita tampil tanpa
+overlap atau clipping. Audit tambahan 1440x900 pada dark mode dengan
+forced reduced-motion memastikan konten langsung terlihat, motion berhenti,
+dan kontras surface layanan tetap terbaca.
+
+## 12I. Beranda Civic Editorial 26 September 2026
+
+Bagian ini menggantikan struktur Beranda pada 12H. Arah visual mengikuti
+`design-taste-frontend`: institusi riset pemerintah yang modern, formal, dan
+editorial (variance 5, motion 3, density 4), tanpa glassmorphism berlebihan,
+warna neon, dependency baru, atau perubahan API/backend.
+Pembaruan copy hero 26 September 2026 (setelah 12I): kicker `Portal Resmi`,
+heading `Selamat Datang di Rumah Brida` (dengan `<br>` dan span), lalu
+`.hero-tagline` berisi garis kuning + teks uppercase `Rumah Berani Riset dan
+Inovasi Daerah`. Aturan `.hero-intro` dihapus dan digantikan `.hero-tagline`
+(garis kuning 56px desktop/36px mobile). CTA dan data portal tetap. Verifikasi:
+`npm run lint` bersih dan build Vite sukses (1925 modul).
+
+- Hero memakai heading `Selamat Datang di Rumah BRIDA` dan tagline institusi.
+  Overlay terdiri dari gradient navy berlapis
+  di atas foto gedung asli, bukan warna rata. CTA memiliki dua fungsi berbeda:
+  `Jelajahi Rumah BRIDA` menggulir ke akses layanan, sedangkan `Berita terbaru`
+  menuju berita; keduanya bukan duplikasi tautan Info Publik.
+- Ringkasan data di sisi hero memanggil endpoint yang sudah ada:
+  `/research-proposals?status=submitted&per_page=1` memakai
+  `pagination.total`, sedangkan `/innovations` memakai `total`. Saat request
+  gagal atau masih dimuat, UI menampilkan em dash dan tidak mengarang angka.
+- Akses cepat menjadi surface mengambang berisi tiga tujuan publik yang unik:
+  Hasil Riset, Dokumen Inovasi, dan Berita & Kegiatan. Desktop memakai intro
+  210px dan tiga kartu ringkas; mobile menjadi daftar vertikal. Hover naik 3px,
+  ikon berubah kuning, dan panah bergerak ke kanan atas.
+- Section `Pengetahuan yang bergerak menjadi dampak` menjelaskan peran Rumah
+  BRIDA dan alur Riset, Kolaborasi, Implementasi. Ketiga langkah bersifat
+  informatif, bukan CTA tambahan, sehingga Beranda tidak mengulang tautan yang
+  sama di banyak tempat.
+- Berita tetap mengambil tepat tiga publikasi terbaru untuk preview, sedangkan
+  arsip lengkap tetap ada di `/berita`. Artikel pertama menjadi featured story
+  bergambar penuh dengan overlay; dua artikel lain menjadi pendamping ringkas.
+  Konten uji tidak di-hardcode oleh frontend dan tetap berasal dari database.
+- CTA penutup hanya untuk SP4N LAPOR dan berada sebelum footer. Footer tetap
+  ringkas tiga kolom; copyright menjadi `BRIDA Provinsi Sulawesi Tengah`.
+- Breakpoint 960px dan 760px mengubah hero, data, akses cepat, alur riset, berita,
+  serta CTA menjadi susunan yang sesuai layar kecil. `prefers-reduced-motion`
+  mematikan drift, entrance, smooth scroll, zoom, dan transform hover baru.
+
+Verifikasi: `npm run lint` bersih dan `npm run build` sukses (1923 modul).
+Chrome headless memeriksa halaman penuh 1440x3000 serta state light/dark setelah
+animasi selesai; tidak ada overlap pada hero, akses cepat, section editorial,
+berita, CTA penutup, atau footer.
+
+## 12J. Submenu dan Route Lomba 26 September 2026
+
+Catatan historis: penghapusan item `Daftar Lomba` saat refactor 12L tidak lagi
+berlaku. Sejak 29 September 2026, item kembali tampil khusus admin/superadmin
+dan halaman sudah terhubung ke backend lomba.
+
+- Menu `Lomba` sekarang selalu berupa trigger submenu. Publik melihat
+  `Pendaftaran` menuju `/lomba/pendaftaran`; admin juga melihat `Daftar Lomba`
+  menuju `/admin/lomba`. Filter dilakukan pada level `subitem.adminOnly`, bukan
+  menyembunyikan seluruh menu Lomba.
+- `getActiveMenu()` mengaktifkan indikator Lomba untuk `/lomba`, seluruh
+  `/lomba/...`, dan `/admin/lomba`. Perilaku klik, Escape, menu mobile, dan
+  penutupan submenu tetap memakai mekanisme bersama di `Header.jsx`.
+- `CompetitionRegistrationPage.jsx` menampilkan lomba dari API publik beserta
+  periode, jenis peserta, status, dan tautan Juknis. `AdminCompetitionsPage.jsx`
+  menyediakan form tambah/edit, pencarian, filter status, pagination, serta
+  dialog hapus; tamu atau non-admin tidak dapat membuka workspace.
+
+Verifikasi: `npm run lint` bersih dan `npm run build` sukses (1925 modul).
+Chrome headless memeriksa `/lomba/pendaftaran` pada 1440x1000 dan guard tamu
+`/admin/lomba` pada 1440x700; layout, indikator aktif, dan pesan akses tampil
+tanpa overlap.
+
+### Penyesuaian akses Lomba di Beranda
+
+Setelah route pendaftaran publik ditambahkan, area Akses Cepat Beranda berisi
+empat tujuan: Hasil Riset, Dokumen Inovasi, Pendaftaran Lomba, serta Berita &
+Kegiatan. `Pendaftaran Lomba` memakai ikon `Trophy` dan menuju langsung ke
+`/lomba/pendaftaran`; tidak ditambahkan sebagai CTA ketiga di hero supaya
+hierarki aksi utama tetap ringkas. Footer bagian Layanan juga memuat tautan ini.
+
+Grid akses memakai empat kolom pada desktop dan dua kolom pada <=960px,
+termasuk susunan 2x2 pada mobile 390px. Hanya layar <=360px yang kembali satu
+kolom. Ukuran ikon 38-40px dan tipografi kartu sedikit dipadatkan agar empat
+tujuan tetap terbaca tanpa overflow. Verifikasi `npm run lint` dan
+`npm run build` sukses (1925 modul); screenshot Chrome headless 1440x1000 dan
+900x1000 menunjukkan susunan 4 kolom dan 2x2 tanpa overlap.
+
+### Perbaikan teks submenu mobile
+
+Aturan lama pada breakpoint <=760px pernah memakai `.submenu span { display:
+none; }`. Setelah submenu memakai struktur rich berisi `.subm-text`,
+`.subm-title`, dan `.subm-desc`, selector tersebut menyembunyikan seluruh teks
+dan hanya menyisakan baris tautan kosong. Selector desktop/mobile sekarang
+dibatasi menjadi `.submenu > span`, sehingga hanya span langsung dari markup
+submenu lama yang terpengaruh. Jangan mengembalikannya ke selector descendant;
+semua submenu rich Riset, Inovasi, Info Publik, dan Lomba bergantung pada span
+bersarang. `npm run lint` dan `npm run build` sukses (1925 modul).
+
+## 12K. Refinement Beranda 27 September 2026
+
+Refinement ini mempertahankan struktur civic-editorial 12I dan hanya
+meningkatkan hierarki, ritme, motion, serta ketahanan responsifnya.
+
+- Hero memakai heading dua baris `Selamat Datang` / `di Rumah BRIDA` dengan
+  lebar maksimal 620px dan line-height 1.04. Tagline tetap uppercase tetapi
+  tracking diringankan. Overlay mendapat radial light statis di kanan atas;
+  drift background dan entrance fade dihapus supaya motion hanya muncul pada
+  interaksi yang memiliki fungsi.
+- `Data portal` tetap mengambil total dinamis dari API, disusun sebagai satu
+  komponen dengan divider putih transparan. Jangan mengganti nilai API dengan
+  angka contoh atau hardcode.
+- Token radius `--radius-sm/md/lg`, shadow `--shadow-sm/md/floating`, dan token
+  permukaan Beranda memiliki pasangan light/dark di `App.css`. Akses Cepat
+  memakai radius 16px untuk shell, radius 12px untuk item, hover naik 2px, dan
+  panah bergerak horizontal 3px tanpa glow atau perubahan warna kuning penuh.
+- Copy pengantar dibatasi 580px dengan line-height 1.75. Nomor alur 01/02/03
+  memakai `--home-sequence` agar sedikit lebih terlihat di kedua tema.
+- Area berita memakai `--home-muted-bg`; featured story radius 10px, overlay
+  transparan-ke-navy, dan zoom gambar hanya 1.015 selama 600ms. Berita tanpa
+  gambar menampilkan placeholder brand Rumah BRIDA, bukan ilustrasi atau foto
+  palsu. Gambar utama eager/high priority, gambar pendamping lazy.
+- Link teks Berita memakai underline yang tumbuh dari kiri dan perpindahan
+  panah 3px. CTA SP4N LAPOR mendapat radial blue statis yang sangat tipis;
+  aksen kuning tetap dibatasi untuk kicker, garis kecil, dan tindakan utama.
+- Mobile 390px mempertahankan urutan hero: kicker, heading, tagline, dua CTA,
+  lalu Data Portal dua kolom. Akses Cepat menjadi 2x2; <=360px menjadi satu
+  kolom. Tidak ada horizontal overflow pada seluruh viewport audit.
+
+Verifikasi: lint bersih dan build Vite sukses (1925 modul). Chrome headless
+memeriksa halaman penuh pada 1440x1000 light/dark, 1024x768, 768x1024,
+820x1180, serta 390x844 light/dark. `scrollWidth` sama dengan lebar viewport
+di semua ukuran dan tidak ditemukan overlap atau clipping.
+
+### Featured news aman untuk poster
+
+Featured news tidak lagi menempatkan metadata, judul, ringkasan, dan tautan di
+atas gambar. Gambar berada di bagian atas dengan `object-fit: contain`, lalu
+seluruh informasi tampil di bawahnya. Keputusan ini disengaja karena admin
+dapat mengunggah poster yang sudah berisi teks; jangan mengembalikan overlay
+tanpa mekanisme klasifikasi foto/poster yang dapat diandalkan.
+
+Kolom berita memakai rasio sekitar 56/44 agar headline pendamping tidak terlalu
+cepat wrap. Berita tanpa gambar memakai placeholder editorial `Rumah BRIDA /
+Publikasi` dengan pola grid tipis. Error pemuatan gambar juga berpindah ke
+placeholder yang sama melalui `onError`, sehingga URL gambar yang rusak tidak
+meninggalkan bidang kosong. Verifikasi light/dark pada 1440px dan 390px tidak
+menemukan horizontal overflow; lint dan build Vite tetap lulus.
+
+### Thumbnail landscape homepage
+
+Berita mendukung `homepage_thumbnail` opsional yang terpisah dari `image` dan
+`secondary_image`. Form `/admin/berita` menyarankan rasio 16:9 minimal
+1200x675px. API mengembalikan `homepage_thumbnail_url`; `NewsSection.jsx`
+memakainya lebih dulu dengan `object-fit: cover`, lalu fallback ke `image_url`
+dengan `object-fit: contain` agar poster portrait lama tetap utuh. Bila kedua
+URL gagal atau kosong, placeholder editorial digunakan.
+
+Migration `2026_09_27_000000_add_homepage_thumbnail_to_news_table.php` menambah
+kolom nullable dan sudah diterapkan pada database development. Angka Data
+Portal dinaikkan menjadi 38px desktop/31px mobile dan separator menjadi sedikit
+lebih tegas tanpa mengubah sumber total API. Verifikasi: 18 feature test berita
+(101 assertion), lint, dan build Vite lulus; visual 1440px light serta 390px
+dark tidak memiliki horizontal overflow.
+
+### Motion hero dan penghitung statistik
+
+Keputusan terbaru pemilik mengembalikan entrance animation hanya untuk konten
+hero. Kicker, heading, tagline, CTA, lalu Data Portal memakai fade-up 12px
+sekali saat halaman dimuat, durasi 560ms dengan stagger 60-70ms. Background
+hero tetap statis: jangan mengembalikan drift, parallax, atau animasi berulang.
+
+Angka Hasil Riset dan Inovasi Daerah dihitung dari 0 menuju total API selama
+800ms memakai easing keluar. Nilai akhir tidak di-hardcode. Komponen
+`AnimatedStat` langsung menampilkan nilai akhir dan CSS meniadakan entrance
+saat `prefers-reduced-motion: reduce`. Audit Playwright dengan total simulasi
+148/36 memastikan nilai akhir tepat dan transform hero selesai pada posisi
+normal.
+
+## 12L. Autentikasi Admin dan Navigasi Publik 27 September 2026
+
+Bagian ini menggantikan perilaku autentikasi/navigasi lama pada 12F. Situs
+publik tidak lagi mempunyai tombol Masuk, registrasi, avatar tamu, atau menu
+operasional Riset/Inovasi. Navbar admin menambahkan dua menu `adminOnly`:
+Riset (Proposal Riset dan Hasil Riset) serta Inovasi (Input Inovasi dan Info
+Inovasi). Identitas admin muncul sebagai avatar di samping Theme Toggle, dengan
+dropdown identitas, `Buka Panel Admin`, dan `Keluar`. Mobile memakai filter role
+yang sama. Footer memiliki tautan `Login Admin` yang sengaja dibuat subtle.
+
+Route baru `/admin/login` adalah satu-satunya halaman login dan route `/masuk`
+hanya redirect kompatibilitas. `/admin` menyediakan panel sederhana menuju
+Kelola Berita, Kelola Inovasi, dan Kelola Lomba. Semua `/admin/...`
+dijaga terpusat di `App.jsx`; tamu/non-admin menuju login dan admin yang sudah
+masuk tidak dapat kembali ke form login. Backend menghapus route register,
+menolak login role non-admin sebelum token dibuat, dan melindungi group API
+admin dengan middleware `EnsureUserIsAdmin` selain policy yang sudah ada.
+
+Dependency legacy yang sengaja tetap ada:
+
+- role `researcher`, record user lama, `research_proposals.user_id`, status
+  draft/submitted, relasi inovasi ke pemilik, dan personal access token tidak
+  dimigrasikan atau dihapus;
+- policy view/update/delete pemilik, endpoint proposal/inovasi lama, halaman
+  Draft Saya, serta komponen form/detail tetap berada di codebase;
+- token researcher yang pernah diterbitkan tetap dibatasi policy lama sampai
+  token tersebut dicabut. Tidak ada UI atau endpoint register/login baru untuk
+  menerbitkan sesi researcher;
+- akibat refactor, pengajuan proposal, Draft Saya, input/edit inovasi, dan
+  halaman pengelolaan terkait tidak lagi dapat dimulai oleh peneliti dari situs
+  publik. Produk perlu keputusan migrasi terpisah jika alur peneliti akan
+  diaktifkan kembali;
+- `/admin/lomba` tetap dijaga sebagai route legacy, tetapi tidak ditampilkan di
+  panel karena modul data/API lomba belum tersedia.
+
+Akun admin dibuat aman melalui `php artisan admin:create`. Verifikasi akhir:
+Pint lulus; seluruh backend 59 test/344 assertion lulus; `route:list --path=api`
+menampilkan 24 route tanpa register; frontend lint dan build Vite (1926 modul)
+lulus; 8 unit/regression test frontend lulus. Audit Chrome headless memeriksa
+login 1440px dan 390px dalam light/dark, redirect tamu, navbar/footer publik,
+dashboard admin, menu mobile, dan horizontal overflow; seluruh pemeriksaan
+lulus.
+
+Catatan historis: batas role tunggal `admin` pada bagian 12L ini telah
+digantikan oleh implementasi superadmin pada 12M. Ketentuan situs publik dan
+penonaktifan registrasi tetap berlaku.
+
+## 12M. Superadmin dan Kelola Administrator 27 September 2026
+
+Sistem memiliki tiga nilai role: `superadmin`, `admin`, dan `researcher`
+legacy. `superadmin` mewarisi seluruh akses operasional admin. Helper bersama
+`User::isAdministrator()` di backend dan `isAdministrator()` di
+`frontend/src/utils/auth.js` wajib dipakai untuk akses operasional; jangan
+mengulang pemeriksaan `role === 'admin'` di modul lain. Pemeriksaan role tepat
+`admin` hanya digunakan saat memastikan target akun boleh dikelola.
+
+Route `/admin/administrators` dan API berikut khusus superadmin:
+
+| Method | Endpoint | Fungsi |
+|---|---|---|
+| GET | `/api/admin/administrators` | Daftar admin dan superadmin; researcher tidak disertakan |
+| POST | `/api/admin/administrators` | Membuat akun dengan role admin |
+| PUT | `/api/admin/administrators/{id}` | Mengubah nama dan email admin |
+| PATCH | `/api/admin/administrators/{id}/password` | Reset password dan mencabut seluruh token admin |
+| PATCH | `/api/admin/administrators/{id}/status` | Mengaktifkan/nonaktifkan admin; nonaktif mencabut token |
+
+UI menampilkan tabel nama, email, role, status, tanggal dibuat, dan aksi.
+Superadmin ditampilkan read-only dan tidak dapat diedit, di-reset, atau
+dinonaktifkan dari web. Form web tidak mempunyai pemilih role dan backend selalu
+memaksa akun baru menjadi `admin`. Superadmin pertama/berikutnya hanya dibuat
+melalui `php artisan admin:create-superadmin`. Perlindungan backend tetap wajib
+meski tombol/route sudah disembunyikan dari admin biasa.
+
+Migration `2026_09_27_120000_add_is_active_to_users_table.php` menambah
+`users.is_active` secara non-destruktif dengan default `true`. Middleware
+`active` menolak token akun nonaktif. Login juga menolak akun tersebut; logout
+tetap boleh dipanggil agar sesi lokal dapat dibersihkan. Rate limiter
+`administrator-write` membatasi API pengelolaan akun menjadi 10 request per
+menit per user/IP.
+
+Verifikasi implementasi awal superadmin: migrasi sudah diterapkan pada database
+development; seluruh test, lint, dan build pada saat itu lulus. Angka verifikasi
+terkini dicatat pada bagian perubahan terbaru setelah bagian ini.
+
+## 12N. Penghapusan Verifikasi Proposal 27 September 2026
+
+Fitur verifikasi proposal telah dihapus sepenuhnya dari permukaan aplikasi.
+Kartu `Verifikasi Proposal` tidak ada di panel admin, route frontend
+`/admin/proposal` tidak tersedia, dan file `AdminResearchProposalsPage.jsx`
+dihapus. Detail proposal hanya menampilkan status `Draft` atau `Terkirim` serta
+tidak lagi menampilkan status verifikasi maupun catatan admin.
+
+Endpoint `GET /api/admin/research-proposals` dan
+`PATCH /api/admin/research-proposals/{id}/verification` juga telah dihapus;
+keduanya harus menghasilkan 404. Method controller, policy `review`, dan flag
+respons `can_review` ikut dihapus. Kolom database legacy tetap dipertahankan
+secara pasif seperti dijelaskan pada bagian 8.
+
+URL lama `/admin/proposal` diarahkan kembali ke `/admin`. Helper `Redirect` di
+`App.jsx` menjadwalkan `replaceState` dan event `popstate` setelah mount agar
+navigasi langsung tidak berhenti pada teks `Mengalihkan...`. Verifikasi akhir:
+70 test backend/387 assertion, 11 test frontend, Pint, ESLint, dan build Vite
+lulus; audit browser memastikan panel admin berisi tepat tiga modul operasional.
+
+### Pemulihan submenu Daftar Lomba 29 September 2026
+
+Menu `Lomba` memiliki `Pendaftaran` untuk semua pengguna dan `Daftar Lomba`
+menuju `/admin/lomba` khusus admin/superadmin. `Header.jsx` menyaring
+`visibleSubmenu` pada level subitem melalui flag `adminOnly`; jangan memindahkan
+flag itu ke menu Lomba induk karena akan menyembunyikan Pendaftaran dari publik.
+
+### CRUD Daftar Lomba 29 September 2026
+
+`/admin/lomba` kini bukan shell. Admin/superadmin dapat mengisi kode unik, nama,
+deskripsi, tanggal pembukaan dan penutupan, status Buka/Tutup, jenis peserta,
+serta Juknis PDF. Halaman mendukung edit tanpa wajib mengganti Juknis, hapus
+dengan `DeleteCompetitionModal`, pencarian, filter status, dan pagination.
+
+Halaman publik `/lomba/pendaftaran` membaca sumber data yang sama dan
+menampilkan Juknis melalui endpoint streaming privat. Migration competitions
+sudah dijalankan pada database development. `CompetitionApiTest` mencakup
+akses publik/admin, validasi, create, update file, delete, stream Juknis,
+keunikan kode, superadmin, serta counts.
+
+Verifikasi akhir: backend 76 test/434 assertion dan Pint lulus; frontend 15
+test, ESLint, dan build Vite (1928 modul) lulus. Audit Chrome headless dengan
+fixture API pada viewport 1440px dan 390px memastikan delapan field form,
+kartu admin/publik, serta tautan Juknis tampil tanpa overflow horizontal.
+
+### Form Pendaftaran Peserta Lomba 29 September 2026
+
+`/lomba/pendaftaran` kini memuat form publik dua bagian. `Pilihan Lomba`
+memiliki dropdown Jenis Lomba dan Nama Lomba; nama hanya memuat lomba aktif
+dari jenis terpilih. `Pendaftaran` memiliki Nama, NIK, Alamat, dan Nama Produk.
+Tombol Daftar pada kartu lomba aktif memilih lomba dan menggulir ke form.
+
+Backend menyimpan data pada `competition_registrations`. Validasi server
+mewajibkan NIK 16 digit, mencegah NIK ganda per lomba, dan memastikan status
+serta periode lomba masih aktif. Migration pendaftar sudah dijalankan pada
+database development. Belum ada tampilan admin untuk membaca data peserta.
+
+Verifikasi akhir setelah fitur ini: backend 80 test/459 assertion dan Pint
+lulus; frontend 16 test, ESLint, dan build Vite (1928 modul) lulus. Audit
+Chrome headless pada 1440px dan 390px berhasil mengisi enam kontrol form,
+mengirim payload, menerima pesan sukses, dan tidak menemukan overflow
+horizontal.
 
 ## 13. Alur Kerja Git
 
@@ -1038,7 +1753,7 @@ Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
   Branch fitur lain yang juga sudah di-merge dan dihapus: `feat/api-auth-rate-limit` (Sanctum, policy
   proposal, rate limiting, halaman `/masuk`), `feat/pdf-akses-privat` (storage
   privat dan URL bertanda tangan), `feat/draft-saya` (halaman Draft Saya,
-  pagination, dashboard verifikasi admin, dan `DeleteProposalModal`), dan
+  pagination dan `DeleteProposalModal`), dan
   `feat/news-admin-api` (berita berbasis database dan kelola berita admin,
   masuk lewat pull request #1), `feat/dialog-hapus-berita` (dialog hapus
   berita in-app lewat `DeleteItemModal`/`DeleteNewsModal`), dan
