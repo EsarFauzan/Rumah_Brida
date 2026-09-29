@@ -9,21 +9,21 @@ class NewsPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->role === 'admin';
+        return $user->isAdministrator();
     }
 
     public function create(User $user): bool
     {
-        return $user->role === 'admin';
+        return $user->isAdministrator();
     }
 
     public function update(User $user, News $news): bool
     {
-        return $user->role === 'admin';
+        return $user->isAdministrator();
     }
 
     public function delete(User $user, News $news): bool
     {
-        return $user->role === 'admin';
+        return $user->isAdministrator();
     }
 }

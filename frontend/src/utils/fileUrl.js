@@ -16,3 +16,7 @@ export function storageUrl(path) {
 }
 
 export default storageUrl
+
+export function innovationPdfUrl(id, kind) {
+  return `${API_BASE.replace(/\/$/, '')}/innovations/${encodeURIComponent(id)}/pdf/${kind}`
+}

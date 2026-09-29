@@ -64,6 +64,23 @@ class InnovationController extends Controller
         return response()->json(['data' => $innovation->load('user:id,name')]);
     }
 
+    public function pdf(Innovation $innovation, string $kind)
+    {
+        abort_unless(in_array($kind, ['profile', 'report'], true), 404);
+        $path = $innovation->{$kind.'_pdf_path'};
+        abort_unless($path && Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response(
+            $path,
+            $innovation->{$kind.'_pdf_original_name'} ?: $kind.'.pdf',
+            [
+                'Content-Type' => 'application/pdf',
+                'X-Content-Type-Options' => 'nosniff',
+                'Content-Security-Policy' => "default-src 'none'; sandbox",
+            ],
+        );
+    }
+
     public function store(Request $request)
     {
         $validated = $this->validatePayload($request);

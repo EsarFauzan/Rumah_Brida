@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { getSession, subscribeSession } from '../services/authStore'
+import { isAdministrator, isSuperAdmin } from '../utils/auth'
 
 /**
  * Membaca sesi login dari authStore agar seluruh komponen tetap sinkron.
@@ -11,6 +12,8 @@ function useAuth() {
     user: session.user,
     token: session.token,
     isAuthenticated: Boolean(session.token),
+    isAdministrator: isAdministrator(session.user),
+    isSuperAdmin: isSuperAdmin(session.user),
   }
 }
 

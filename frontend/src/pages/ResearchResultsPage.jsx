@@ -4,6 +4,9 @@ import api from '../services/api'
 import useAuth from '../hooks/useAuth'
 import Pagination from '../components/Pagination'
 import DeleteProposalModal from '../components/DeleteProposalModal'
+import ServicePageHeader from '../components/ServicePageHeader'
+import FilterSummary from '../components/FilterSummary'
+import PdfPreviewLink from '../components/PdfPreviewLink'
 
 function ResearchResultsPage() {
   const [proposals, setProposals] = useState([])
@@ -85,21 +88,7 @@ function ResearchResultsPage() {
 
   return (
     <section className="research-results-page research-results-page-modern">
-      <div className="research-results-hero">
-        <div className="research-results-hero-inner">
-          <div>
-            <div className="research-results-crumb">
-              Riset <span /> <b>Hasil Riset</b>
-            </div>
-            <h1>Hasil Riset</h1>
-            <p>Daftar proposal riset yang telah dikirim oleh para peneliti.</p>
-          </div>
-          <div className="research-results-stat">
-            <strong>{total}</strong>
-            <span>Total Riset</span>
-          </div>
-        </div>
-      </div>
+      <ServicePageHeader section="Riset" title="Hasil Riset" description="Daftar proposal riset yang telah dikirim oleh para peneliti." total={total} totalLabel="riset" action={<a className="primary-form-link" href={isAuthenticated ? '/riset/proposal' : '/masuk'}>{isAuthenticated ? 'Ajukan Proposal' : 'Masuk untuk Mengajukan'}</a>} />
 
       <div className="research-results-container">
         <div className="research-results-toolbar">
@@ -111,20 +100,20 @@ function ResearchResultsPage() {
               placeholder="Cari judul, peneliti, atau institusi..."
               aria-label="Cari hasil riset"
               onChange={(event) => {
+                setIsLoading(true)
                 setSearchTerm(event.target.value)
                 setPage(1)
               }}
             />
             {searchTerm && (
-              <button type="button" aria-label="Hapus pencarian" onClick={() => { setSearchTerm(''); setPage(1) }}>
+              <button type="button" aria-label="Hapus pencarian" onClick={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }}>
                 <X size={15} aria-hidden="true" />
               </button>
             )}
           </label>
-          <a className="research-results-submit" href={isAuthenticated ? '/riset/proposal' : '/masuk'}>
-            {isAuthenticated ? 'Ajukan Proposal' : 'Masuk untuk Mengajukan'}
-          </a>
         </div>
+        <FilterSummary count={pagination?.total} noun="riset" loading={isLoading} error={error} search={searchTerm}
+          onSearchClear={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }} onReset={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }} />
 
         {error && <div className="results-state is-error" role="alert">{error}</div>}
         {isLoading ? (
@@ -138,32 +127,32 @@ function ResearchResultsPage() {
           </div>
         ) : !error && (
           <div className="research-results-table-wrap">
-            <table className="research-results-table">
-              <thead>
-                <tr>
+            <table className="research-results-table responsive-records" role="table" aria-label="Daftar proposal riset">
+              <thead role="rowgroup">
+                <tr role="row">
                   <th className="research-table-number" scope="col">No</th>
                   <th scope="col">Judul Proposal</th>
                   <th scope="col">Peneliti &amp; Institusi</th>
                   <th className="research-table-action" scope="col">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {proposals.map((proposal, index) => {
                   const rowNumber = ((pagination?.current_page ?? 1) - 1) * (pagination?.per_page ?? 10) + index + 1
                   return (
-                    <tr key={proposal.id}>
-                      <td className="research-table-number-cell">{rowNumber}</td>
-                      <td><strong className="research-table-title">{proposal.proposal_title}</strong></td>
-                      <td>
+                    <tr key={proposal.id} role="row">
+                      <td role="cell" className="research-table-number-cell">{rowNumber}</td>
+                      <td role="cell"><strong className="research-table-title">{proposal.proposal_title}</strong></td>
+                      <td role="cell" data-label="Peneliti & institusi">
                         <strong className="research-table-researcher">{proposal.researcher_name}</strong>
                         <span className="research-table-institution">{proposal.institution}</span>
                       </td>
-                      <td>
+                      <td role="cell" data-label="Berkas & tindakan">
                         <div className="research-table-actions">
                           {proposal.pdf_url ? (
-                            <a className="research-table-file" href={proposal.pdf_url} target="_blank" rel="noreferrer">
+                            <PdfPreviewLink className="research-table-file" href={proposal.pdf_url} filename={proposal.pdf_original_name || `${proposal.proposal_title}.pdf`}>
                               <FileText size={13} aria-hidden="true" /> PDF
-                            </a>
+                            </PdfPreviewLink>
                           ) : (
                             <span className="research-table-file is-disabled" aria-disabled="true">
                               <FileText size={13} aria-hidden="true" /> PDF

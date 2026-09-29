@@ -8,12 +8,6 @@ function formatDate(value) {
   return new Intl.DateTimeFormat('id-ID', { dateStyle: 'long', timeStyle: 'short' }).format(new Date(value))
 }
 
-const verificationLabels = {
-  pending: 'Menunggu Verifikasi',
-  approved: 'Disetujui',
-  rejected: 'Ditolak',
-}
-
 function ResearchProposalDetailPage({ proposalId }) {
   const [proposal, setProposal] = useState(null)
   const [error, setError] = useState('')
@@ -71,8 +65,8 @@ function ResearchProposalDetailPage({ proposalId }) {
 
         <header className="proposal-detail-header">
           <div>
-            <span className={`result-status ${proposal.status === 'draft' ? 'is-draft' : `is-${proposal.verification_status}`}`}>
-              {proposal.status === 'draft' ? 'Draft' : (verificationLabels[proposal.verification_status] ?? 'Menunggu Verifikasi')}
+            <span className={`result-status ${proposal.status === 'draft' ? 'is-draft' : 'is-submitted'}`}>
+              {proposal.status === 'draft' ? 'Draft' : 'Terkirim'}
             </span>
             <h1>{proposal.proposal_title || 'Proposal tanpa judul'}</h1>
             <p>Dikirim {formatDate(proposal.submitted_at || proposal.created_at)}</p>
@@ -87,8 +81,6 @@ function ResearchProposalDetailPage({ proposalId }) {
         </header>
 
         {error && <div className="form-feedback error">{error}</div>}
-        {proposal.status === 'submitted' && proposal.review_note && <div className="proposal-review-note"><strong>Catatan Admin</strong><span>{proposal.review_note}</span></div>}
-
         <div className="proposal-overview">
           <div><span>Nama Peneliti</span><strong>{proposal.researcher_name || '-'}</strong></div>
           <div><span>Asal Universitas/PT</span><strong>{proposal.institution || '-'}</strong></div>

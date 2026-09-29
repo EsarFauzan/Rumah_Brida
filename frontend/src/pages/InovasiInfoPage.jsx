@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
-import { storageUrl } from '../utils/fileUrl'
+import { innovationPdfUrl } from '../utils/fileUrl'
 import api from '../services/api'
 import useAuth from '../hooks/useAuth'
 import ConfirmModal from '../components/ConfirmModal'
 import Pagination from '../components/Pagination'
+import ServicePageHeader from '../components/ServicePageHeader'
+import FilterSummary from '../components/FilterSummary'
+import PdfPreviewLink from '../components/PdfPreviewLink'
 
 function InovasiInfoPage() {
   const [innovations, setInnovations] = useState([])
@@ -76,21 +79,7 @@ function InovasiInfoPage() {
     <section className="if-page">
       <style>{styles}</style>
 
-      <div className="if-hero">
-        <div className="if-hero-inner">
-          <div>
-            <div className="if-crumb">
-              Inovasi <span className="if-crumb-dot" /> <b>Info Inovasi</b>
-            </div>
-            <h1>Info Inovasi</h1>
-            <p>Jelajahi seluruh inovasi daerah yang telah tercatat dan terverifikasi.</p>
-          </div>
-          <div className="if-stat">
-            <div className="if-stat-value">{total}</div>
-            <div className="if-stat-label">Total Inovasi</div>
-          </div>
-        </div>
-      </div>
+      <ServicePageHeader section="Inovasi" title="Info Inovasi" description="Jelajahi inovasi daerah beserta profil dan laporan pelaksanaannya." total={total} totalLabel="inovasi" action={<a className="primary-form-link" href="/inovasi/input">Tambah Inovasi</a>} />
 
       <div className="if-container">
         {feedback && <div className={`form-feedback ${feedback.type}`} role="status">{feedback.message}</div>}
@@ -103,17 +92,17 @@ function InovasiInfoPage() {
                 type="text"
                 placeholder="Cari judul atau nama inovator..."
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
+                onChange={(e) => { setIsLoading(true); setSearchTerm(e.target.value); setPage(1) }}
                 aria-label="Cari judul atau nama inovator"
               />
               {searchTerm && (
-                <button type="button" className="if-search-clear" aria-label="Hapus pencarian" onClick={() => { setSearchTerm(''); setPage(1) }}>
+                <button type="button" className="if-search-clear" aria-label="Hapus pencarian" onClick={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }}>
                   <XIcon />
                 </button>
               )}
             </div>
             <div className="if-year-select">
-              <select aria-label="Tahun pelaporan" value={yearFilter} onChange={(e) => { setYearFilter(e.target.value); setPage(1) }}>
+              <select aria-label="Tahun pelaporan" value={yearFilter} onChange={(e) => { setIsLoading(true); setYearFilter(e.target.value); setPage(1) }}>
                 <option value="all">Semua Tahun</option>
                 {availableYears.map((year) => (
                   <option key={year} value={year}>{year}</option>
@@ -124,6 +113,9 @@ function InovasiInfoPage() {
           </div>
         )}
 
+        <FilterSummary count={pagination?.total} noun="inovasi" loading={isLoading} error={feedback?.type === 'error'} search={searchTerm} year={yearFilter}
+          onSearchClear={() => { setIsLoading(true); setSearchTerm(''); setPage(1) }} onYearClear={() => { setIsLoading(true); setYearFilter('all'); setPage(1) }}
+          onReset={() => { setIsLoading(true); setSearchTerm(''); setYearFilter('all'); setPage(1) }} />
         {isLoading ? (
           <div className="if-table-loading" aria-label="Memuat data inovasi">
             {[1, 2, 3, 4].map((n) => (
@@ -144,34 +136,34 @@ function InovasiInfoPage() {
           </div>
         ) : (
           <div className="if-table-wrap">
-            <table className="if-table">
-              <thead>
-                <tr>
+            <table className="if-table responsive-records" role="table" aria-label="Daftar inovasi daerah">
+              <thead role="rowgroup">
+                <tr role="row">
                   <th className="if-col-number" scope="col">NO</th>
                   <th scope="col">Judul</th>
                   <th scope="col">OPD</th>
                   <th className="if-col-action" scope="col">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody role="rowgroup">
                 {innovations.map((item, index) => {
                   const isOwner = isAuthenticated && user?.id === item.user_id
                   const rowNumber = ((pagination?.current_page ?? 1) - 1) * (pagination?.per_page ?? 10) + index + 1
                   return (
-                    <tr key={item.id}>
-                      <td className="if-cell-number">{rowNumber}</td>
-                      <td>
+                    <tr key={item.id} role="row">
+                      <td role="cell" className="if-cell-number">{rowNumber}</td>
+                      <td role="cell">
                         <strong className="if-table-title">{item.title}</strong>
                       </td>
-                      <td>
+                      <td role="cell" data-label="OPD">
                         <span className={item.regional_agency ? 'if-table-opd' : 'if-table-empty'}>
                           {item.regional_agency || 'Belum diisi'}
                         </span>
                       </td>
-                      <td>
+                      <td role="cell" data-label="Berkas & tindakan">
                         <div className="if-table-actions">
-                          <InnovationFileAction path={item.profile_pdf_path} label="Profil" />
-                          <InnovationFileAction path={item.report_pdf_path} label="Laporan" />
+                          <InnovationFileAction path={item.profile_pdf_path} pdfUrl={innovationPdfUrl(item.id, 'profile')} filename={item.profile_pdf_original_name || `Profil ${item.title}.pdf`} label="Profil" />
+                          <InnovationFileAction path={item.report_pdf_path} pdfUrl={innovationPdfUrl(item.id, 'report')} filename={item.report_pdf_original_name || `Laporan ${item.title}.pdf`} label="Laporan" />
                           {isOwner && (
                             <>
                               <a className="if-icon-btn" href={`/inovasi/edit/${item.id}`} aria-label={`Edit ${item.title}`} title="Edit">
@@ -216,7 +208,7 @@ function InovasiInfoPage() {
   )
 }
 
-function InnovationFileAction({ path, label }) {
+function InnovationFileAction({ path, pdfUrl, label, filename }) {
   if (!path) {
     return (
       <span className="if-file-link is-unavailable" aria-disabled="true" title={`${label} belum tersedia`}>
@@ -226,9 +218,9 @@ function InnovationFileAction({ path, label }) {
   }
 
   return (
-    <a className="if-file-link is-available" href={storageUrl(path)} target="_blank" rel="noopener noreferrer">
+    <PdfPreviewLink className="if-file-link is-available" href={pdfUrl} filename={filename}>
       <FileIcon /> {label}
-    </a>
+    </PdfPreviewLink>
   )
 }
 
@@ -300,12 +292,8 @@ const styles = `
 .if-page { min-height: 100vh; background: var(--bg-soft); padding-bottom: 80px; }
 
 .if-hero {
-  background: linear-gradient(120deg, var(--navy-deep) 0%, var(--navy) 100%);
+  background: linear-gradient(120deg, var(--page-banner-start) 0%, var(--page-banner-end) 100%);
   padding: 36px 40px 40px; color: #fff; position: relative; overflow: hidden;
-}
-.if-hero::before {
-  content: ''; position: absolute; right: -60px; top: -80px; width: 280px; height: 280px; border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--yellow) 35%, transparent), transparent 70%);
 }
 .if-hero-inner {
   max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: flex-end;
