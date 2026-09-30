@@ -10,6 +10,8 @@ import { innovationRequiredFields, validateInnovation, focusFirstError, hasValue
 import api from '../services/api'
 import useAuth from '../hooks/useAuth'
 
+const OTHER_GOVERNMENT_AFFAIR = 'Urusan Pemerintahan Lainnya'
+
 const initialForm = {
   title: '',
   innovator_name: '',
@@ -41,6 +43,7 @@ function InnovationForm({ innovationId }) {
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEditMode)
+  const [isCustomGovernmentAffair, setIsCustomGovernmentAffair] = useState(false)
   const [existingFiles, setExistingFiles] = useState({ profile_pdf_path: null, report_pdf_path: null })
   const [reviewOpen, setReviewOpen] = useState(false)
   const savingRef = useRef(false)
@@ -122,7 +125,11 @@ function InnovationForm({ innovationId }) {
   }
   const progressPercent = Math.round(innovationRequiredFields.filter(isFieldFilled).length / innovationRequiredFields.length * 100)
   const completeness = SECTIONS.map(section => ({ title: section.title, done: isSectionDone(section.fields), optional: !section.fields.some(key => innovationRequiredFields.includes(key)) }))
-  const labels = { title: 'Judul', innovator_name: 'Inovator', registration_number: 'Nomor Registrasi', reporting_year: 'Tahun Pelaporan', innovation_type: 'Bentuk Inovasi', government_affair: 'Urusan Pemerintahan', regional_agency: 'Perangkat Daerah', trial_date: 'Uji Coba', implementation_date: 'Penerapan', ratification_date: 'Pengembangan', profile_pdf: 'Profil', report_pdf: 'Laporan' }
+  const isGovernmentAffairCustom = isCustomGovernmentAffair || (
+    form.government_affair && options.government_affairs.length > 0 &&
+    !options.government_affairs.includes(form.government_affair)
+  )
+  const labels = { title: 'Judul', innovator_name: 'Inovator', registration_number: 'Nomor Registrasi', reporting_year: 'Tahun Pelaporan', innovation_type: 'Bentuk Inovasi', government_affair: 'Urusan Pemerintahan Utama', regional_agency: 'Perangkat Daerah', trial_date: 'Uji Coba', implementation_date: 'Penerapan', ratification_date: 'Pengembangan', profile_pdf: 'Profil', report_pdf: 'Laporan' }
   const reviewSections = SECTIONS.map(section => ({ title: section.title, entries: section.fields.map(key => [labels[key], form[key]?.name || form[key] || (existingFiles[key + '_path'] ? 'Berkas tersimpan' : '')]) }))
   const requestReview = event => {
     event.preventDefault()
@@ -318,13 +325,36 @@ function InnovationForm({ innovationId }) {
                 <label className="inovasi-field"><span className="field-label">Urusan Pemerintahan Utama<FieldRequirement required={true} /></span>
                   <div className="inovasi-input-wrap">
                     <IconBuilding className="inovasi-icon" strokeWidth={1.8} aria-hidden="true" />
-                    <select aria-required="true" aria-invalid={Boolean(errors.government_affair)} name="government_affair" value={form.government_affair} onChange={updateField}>
-                      <option value="">Pilih urusan pemerintahan</option>
-                      {options.government_affairs.map((affair) => (
-                        <option key={affair} value={affair}>{affair}</option>
-                      ))}
-                    </select>
-                    <IconChevron className="inovasi-chevron" aria-hidden="true" />
+                    {isGovernmentAffairCustom ? (
+                      <>
+                        <input type="text" aria-required="true" aria-invalid={Boolean(errors.government_affair)} name="government_affair" value={form.government_affair === OTHER_GOVERNMENT_AFFAIR ? '' : form.government_affair} onChange={updateField} maxLength={255} placeholder="Urusan Pemerintahan Lainnya" />
+                        <button className="inovasi-chevron-button" type="button" aria-label="Pilih urusan dari daftar" onClick={() => {
+                          setIsCustomGovernmentAffair(false)
+                          setForm((current) => ({ ...current, government_affair: '' }))
+                          setErrors((current) => ({ ...current, government_affair: undefined }))
+                        }}>
+                          <IconChevron aria-hidden="true" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <select aria-required="true" aria-invalid={Boolean(errors.government_affair)} name="government_affair" value={form.government_affair} onChange={(event) => {
+                          if (event.target.value === OTHER_GOVERNMENT_AFFAIR) {
+                            setIsCustomGovernmentAffair(true)
+                            setForm((current) => ({ ...current, government_affair: '' }))
+                          } else {
+                            setIsCustomGovernmentAffair(false)
+                            updateField(event)
+                          }
+                        }}>
+                          <option value="">Pilih urusan pemerintahan</option>
+                          {options.government_affairs.map((affair) => (
+                            <option key={affair} value={affair}>{affair}</option>
+                          ))}
+                        </select>
+                        <IconChevron className="inovasi-chevron" aria-hidden="true" />
+                      </>
+                    )}
                   </div>
                   {errors.government_affair && <small className="field-error">{errors.government_affair}</small>}
                 </label>

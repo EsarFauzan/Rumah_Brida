@@ -1732,6 +1732,21 @@ Chrome headless pada 1440px dan 390px berhasil mengisi enam kontrol form,
 mengirim payload, menerima pesan sukses, dan tidak menemukan overflow
 horizontal.
 
+### Penyesuaian Urusan Pemerintahan Inovasi 30 September 2026
+
+Pada form Bentuk Inovasi, opsi urusan utama `Pelayanan Umum dan Tata Ruang`
+diganti menjadi `Pekerjaan Umum dan Tata Ruang`. Dropdown urusan tetap memakai
+kontrol dan posisi yang sama seperti sebelumnya. Saat `Urusan Pemerintahan
+Lainnya` dipilih, kontrol itu berubah menjadi input teks pada tempat yang sama;
+ikon panah tetap berada di dalam field dan tombolnya dapat mengembalikan daftar
+pilihan. Tidak ada kolom kedua.
+
+Nilai bebas tetap disimpan pada `innovations.government_affair`, divalidasi
+sebagai teks maksimal 255 karakter, dan dimuat kembali sebagai input teks saat
+edit. Record lama yang berisi label umum `Urusan Pemerintahan Lainnya` juga
+langsung membuka input teks saat diedit. Tidak ada migration atau perubahan
+struktur database.
+
 ## 13. Alur Kerja Git
 
 Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
