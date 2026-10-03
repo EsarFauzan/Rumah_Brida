@@ -127,7 +127,7 @@ function InnovationForm({ innovationId }) {
   }
   const progressPercent = Math.round(innovationRequiredFields.filter(isFieldFilled).length / innovationRequiredFields.length * 100)
   const completeness = SECTIONS.map(section => ({ title: section.title, done: isSectionDone(section.fields), optional: !section.fields.some(key => innovationRequiredFields.includes(key)) }))
-  const isGovernmentAffairCustom = isCustomGovernmentAffair || (
+  const isGovernmentAffairCustom = isCustomGovernmentAffair || form.government_affair === OTHER_GOVERNMENT_AFFAIR || (
     form.government_affair && options.government_affairs.length > 0 &&
     !options.government_affairs.includes(form.government_affair)
   )
