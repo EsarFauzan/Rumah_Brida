@@ -13,9 +13,10 @@ class InnovationApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_government_affair_options_and_custom_value(): void
+    public function test_innovation_type_and_government_affair_accept_custom_values(): void
     {
         $this->getJson('/api/innovations/options')->assertOk()
+            ->assertJsonFragment(['Inovasi Daerah Lainnya'])
             ->assertJsonFragment(['Pekerjaan Umum dan Tata Ruang'])
             ->assertJsonMissing(['Pelayanan Umum dan Tata Ruang']);
 
@@ -35,6 +36,16 @@ class InnovationApiTest extends TestCase
             'id' => $id,
             'government_affair' => 'Komunikasi dan Informatika',
         ]);
+
+        $customType = 'Inovasi Teknologi Tepat Guna';
+        $this->postJson('/api/innovations', array_merge($payload, [
+            'title' => 'Inovasi Bentuk Lainnya',
+            'innovation_type' => $customType,
+        ]))->assertCreated()->assertJsonPath('data.innovation_type', $customType);
+
+        $this->postJson('/api/innovations', array_merge($payload, [
+            'innovation_type' => str_repeat('A', 256),
+        ]))->assertUnprocessable()->assertJsonValidationErrors('innovation_type');
 
         $this->postJson('/api/innovations', array_merge($payload, [
             'government_affair' => str_repeat('A', 256),

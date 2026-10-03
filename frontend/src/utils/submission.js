@@ -30,7 +30,7 @@ export function validateResearch(form, existingPdf = false) {
 export function validateInnovation(form) {
   const errors = {}
   for (const key of innovationRequiredFields) if (!hasValue(form[key])) errors[key] = 'Wajib diisi.'
-  for (const key of ['title', 'innovator_name', 'registration_number', 'government_affair', 'regional_agency']) {
+  for (const key of ['title', 'innovator_name', 'registration_number', 'innovation_type', 'government_affair', 'regional_agency']) {
     if (form[key]?.length > 255) errors[key] = 'Maksimal 255 karakter.'
   }
   const year = Number(form.reporting_year)

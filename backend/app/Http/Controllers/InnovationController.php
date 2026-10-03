@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Innovation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class InnovationController extends Controller
 {
@@ -165,7 +164,7 @@ class InnovationController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'innovator_name' => ['required', 'string', 'max:255'],
             'registration_number' => ['nullable', 'string', 'max:255'],
-            'innovation_type' => ['required', Rule::in(self::INNOVATION_TYPES)],
+            'innovation_type' => ['required', 'string', 'max:255'],
             'government_affair' => ['required', 'string', 'max:255'],
             'regional_agency' => ['nullable', 'string', 'max:255'],
             'trial_date' => ['nullable', 'date'],

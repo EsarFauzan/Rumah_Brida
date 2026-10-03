@@ -11,6 +11,7 @@ import api from '../services/api'
 import useAuth from '../hooks/useAuth'
 
 const OTHER_GOVERNMENT_AFFAIR = 'Urusan Pemerintahan Lainnya'
+const OTHER_INNOVATION_TYPE = 'Inovasi Daerah Lainnya'
 
 const initialForm = {
   title: '',
@@ -43,6 +44,7 @@ function InnovationForm({ innovationId }) {
   const [feedback, setFeedback] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEditMode)
+  const [isCustomInnovationType, setIsCustomInnovationType] = useState(false)
   const [isCustomGovernmentAffair, setIsCustomGovernmentAffair] = useState(false)
   const [existingFiles, setExistingFiles] = useState({ profile_pdf_path: null, report_pdf_path: null })
   const [reviewOpen, setReviewOpen] = useState(false)
@@ -128,6 +130,10 @@ function InnovationForm({ innovationId }) {
   const isGovernmentAffairCustom = isCustomGovernmentAffair || (
     form.government_affair && options.government_affairs.length > 0 &&
     !options.government_affairs.includes(form.government_affair)
+  )
+  const isInnovationTypeCustom = isCustomInnovationType || form.innovation_type === OTHER_INNOVATION_TYPE || (
+    form.innovation_type && options.innovation_types.length > 0 &&
+    !options.innovation_types.includes(form.innovation_type)
   )
   const labels = { title: 'Judul', innovator_name: 'Inovator', registration_number: 'Nomor Registrasi', reporting_year: 'Tahun Pelaporan', innovation_type: 'Bentuk Inovasi', government_affair: 'Urusan Pemerintahan Utama', regional_agency: 'Perangkat Daerah', trial_date: 'Uji Coba', implementation_date: 'Penerapan', ratification_date: 'Pengembangan', profile_pdf: 'Profil', report_pdf: 'Laporan' }
   const reviewSections = SECTIONS.map(section => ({ title: section.title, entries: section.fields.map(key => [labels[key], form[key]?.name || form[key] || (existingFiles[key + '_path'] ? 'Berkas tersimpan' : '')]) }))
@@ -311,13 +317,36 @@ function InnovationForm({ innovationId }) {
                 <label className="inovasi-field"><span className="field-label">Bentuk Inovasi Daerah<FieldRequirement required={true} /></span>
                   <div className="inovasi-input-wrap">
                     <IconLayers className="inovasi-icon" strokeWidth={1.8} aria-hidden="true" />
-                    <select aria-required="true" aria-invalid={Boolean(errors.innovation_type)} name="innovation_type" value={form.innovation_type} onChange={updateField}>
-                      <option value="">Pilih Bentuk Inovasi</option>
-                      {options.innovation_types.map((type) => (
-                        <option key={type} value={type}>{type}</option>
-                      ))}
-                    </select>
-                    <IconChevron className="inovasi-chevron" aria-hidden="true" />
+                    {isInnovationTypeCustom ? (
+                      <>
+                        <input type="text" aria-required="true" aria-invalid={Boolean(errors.innovation_type)} name="innovation_type" value={form.innovation_type === OTHER_INNOVATION_TYPE ? '' : form.innovation_type} onChange={updateField} maxLength={255} placeholder="Bentuk Inovasi Daerah Lainnya" />
+                        <button className="inovasi-chevron-button" type="button" aria-label="Pilih bentuk inovasi dari daftar" onClick={() => {
+                          setIsCustomInnovationType(false)
+                          setForm((current) => ({ ...current, innovation_type: '' }))
+                          setErrors((current) => ({ ...current, innovation_type: undefined }))
+                        }}>
+                          <IconChevron aria-hidden="true" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <select aria-required="true" aria-invalid={Boolean(errors.innovation_type)} name="innovation_type" value={form.innovation_type} onChange={(event) => {
+                          if (event.target.value === OTHER_INNOVATION_TYPE) {
+                            setIsCustomInnovationType(true)
+                            setForm((current) => ({ ...current, innovation_type: '' }))
+                          } else {
+                            setIsCustomInnovationType(false)
+                            updateField(event)
+                          }
+                        }}>
+                          <option value="">Pilih Bentuk Inovasi</option>
+                          {options.innovation_types.map((type) => (
+                            <option key={type} value={type}>{type}</option>
+                          ))}
+                        </select>
+                        <IconChevron className="inovasi-chevron" aria-hidden="true" />
+                      </>
+                    )}
                   </div>
                   {errors.innovation_type && <small className="field-error">{errors.innovation_type}</small>}
                 </label>
