@@ -42,6 +42,7 @@ function InnovationForm({ innovationId }) {
   const [options, setOptions] = useState({ innovation_types: [], government_affairs: [] })
   const [errors, setErrors] = useState({})
   const [feedback, setFeedback] = useState(null)
+  const [completion, setCompletion] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoadingRecord, setIsLoadingRecord] = useState(isEditMode)
   const [isCustomInnovationType, setIsCustomInnovationType] = useState(false)
@@ -52,6 +53,7 @@ function InnovationForm({ innovationId }) {
   const [activeSection, setActiveSection] = useState(SECTIONS[0].id)
   const { isAuthenticated } = useAuth()
   const sectionRefs = useRef({})
+  const formMainRef = useRef(null)
 
   useEffect(() => {
     api.get('/innovations/options')
@@ -120,6 +122,28 @@ function InnovationForm({ innovationId }) {
     sectionRefs.current[id]?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' })
   }
 
+  const startAnotherInnovation = () => {
+    setForm(initialForm)
+    setErrors({})
+    setFeedback(null)
+    setCompletion(null)
+    setIsCustomInnovationType(false)
+    setIsCustomGovernmentAffair(false)
+    const profileInput = document.getElementById('innovation-profile-pdf')
+    const reportInput = document.getElementById('innovation-report-pdf')
+    if (profileInput) profileInput.value = ''
+    if (reportInput) reportInput.value = ''
+    formMainRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    })
+  }
+
+  const viewInnovationResults = () => {
+    window.history.pushState({}, '', '/inovasi/info')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+
   const isFieldFilled = key => hasValue(form[key]) || Boolean(existingFiles[key + '_path'])
   const isSectionDone = fields => {
     const required = fields.filter(key => innovationRequiredFields.includes(key))
@@ -168,15 +192,19 @@ function InnovationForm({ innovationId }) {
         ? await api.post(`/innovations/${innovationId}`, payload)
         : await api.post('/innovations', payload)
 
-      setFeedback({ type: 'success', message: response.data.message })
-
       if (!isEditMode) {
-        setForm(initialForm)
+        setCompletion({ message: response.data.message })
+        setFeedback(null)
         const profileInput = document.getElementById('innovation-profile-pdf')
         const reportInput = document.getElementById('innovation-report-pdf')
         if (profileInput) profileInput.value = ''
         if (reportInput) reportInput.value = ''
+        formMainRef.current?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+          block: 'start',
+        })
       } else {
+        setFeedback({ type: 'success', message: response.data.message })
         window.setTimeout(() => {
           window.location.href = '/inovasi/info'
         }, 800)
@@ -233,8 +261,8 @@ function InnovationForm({ innovationId }) {
   return (
     <section className="inovasi-page research-page">
       <ServicePageHeader section="Inovasi" title={isEditMode ? 'Edit Inovasi' : 'Input Inovasi'} description="Catat gagasan dan perkembangan inovasi daerah Anda." />
-      <div className="inovasi-layout">
-        <nav className="inovasi-steps">
+      <div className={`inovasi-layout${completion ? ' is-complete' : ''}`}>
+        {!completion && <nav className="inovasi-steps">
           {SECTIONS.map((section, index) => {
             const done = isSectionDone(section.fields)
             const isActive = activeSection === section.id
@@ -253,12 +281,24 @@ function InnovationForm({ innovationId }) {
               </button>
             )
           })}
-        </nav>
+        </nav>}
 
-        <div className="inovasi-form-main">
-          <FormProgress sections={completeness} />
+        <div className="inovasi-form-main" ref={formMainRef}>
+          {!completion && <FormProgress sections={completeness} />}
         <div className="inovasi-form-card research-form-card">
-          {feedback && <div className={`form-feedback ${feedback.type}`} role="status">{feedback.message}</div>}
+          {completion ? (
+            <div className="inovasi-completion form-feedback success" role="status">
+              <h2>Inovasi berhasil disimpan</h2>
+              <p>{completion.message}</p>
+              <p>Apa yang ingin Anda lakukan selanjutnya?</p>
+              <div className="inovasi-completion-actions">
+                <button className="secondary-form-button" type="button" onClick={startAnotherInnovation}>Input Inovasi Lagi</button>
+                <button className="primary-form-button" type="button" onClick={viewInnovationResults}>Lihat Hasil Inovasi</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {feedback && <div className={`form-feedback ${feedback.type}`} role="status">{feedback.message}</div>}
 
           <form onSubmit={requestReview} noValidate>
 
@@ -499,6 +539,8 @@ function InnovationForm({ innovationId }) {
               </div>
             </div>
           </form>
+            </>
+          )}
         </div>
         </div>
       </div>

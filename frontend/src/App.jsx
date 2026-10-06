@@ -6,7 +6,6 @@ import NewsDetailPage from './pages/NewsDetailPage'
 import NewsArchivePage from './pages/NewsArchivePage'
 import LoginPage from './pages/LoginPage'
 import ResearchProposalPage from './pages/ResearchProposalPage'
-import ResearchDraftsPage from './pages/ResearchDraftsPage'
 import ResearchResultsPage from './pages/ResearchResultsPage'
 import ResearchProposalDetailPage from './pages/ResearchProposalDetailPage'
 import AdminNewsPage from './pages/AdminNewsPage'
@@ -86,7 +85,7 @@ function App() {
     }
 
     if (pathname === '/riset/draft') {
-      return <ResearchDraftsPage />
+      return <Redirect to="/riset/hasil#draft" />
     }
 
     if (pathname === '/riset/hasil') {

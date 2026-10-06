@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Edit3, ExternalLink, FileImage, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react'
 import DeleteNewsModal from '../components/DeleteNewsModal'
+import FieldRequirement from '../components/FieldRequirement'
 import FilterSummary from '../components/FilterSummary'
 import Pagination from '../components/Pagination'
 import ServicePageHeader from '../components/ServicePageHeader'
@@ -12,7 +13,7 @@ const emptyMedia = { image_url: '', homepage_thumbnail_url: '', secondary_image_
 const emptyPagination = { current_page: 1, last_page: 1, per_page: 10, total: 0 }
 const emptyCounts = { total: 0, published: 0, draft: 0 }
 
-function ImageUploadField({ name, label, hint, file, existingUrl, inputKey, onChange, className = '' }) {
+function ImageUploadField({ name, label, hint, file, existingUrl, inputKey, onChange, className = '', required = false }) {
   const [preview, setPreview] = useState('')
 
   useEffect(() => {
@@ -30,7 +31,7 @@ function ImageUploadField({ name, label, hint, file, existingUrl, inputKey, onCh
   const source = preview || existingUrl
 
   return <label className={`news-admin-upload${className ? ` ${className}` : ''}`}>
-    <span className="news-admin-label"><strong>{label}</strong><small>Opsional</small></span>
+    <span className="news-admin-label"><strong>{label}<FieldRequirement required={required} /></strong></span>
     <span className={`news-admin-upload-box${source ? ' has-preview' : ''}`}>
       {source ? <img src={source} alt={`Pratinjau ${label.toLowerCase()}`} /> : <FileImage size={24} aria-hidden="true" />}
       <span>{file?.name || (existingUrl ? 'Gambar saat ini' : 'Pilih gambar')}</span>
@@ -187,18 +188,18 @@ function AdminNewsPage() {
             {editingId && <button type="button" onClick={resetForm}><X size={16} aria-hidden="true" /> Batal edit</button>}
           </header>
           <div className="news-admin-fields">
-            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Judul berita</strong><small>Wajib</small></span><input name="title" value={form.title} onChange={update} placeholder="Masukkan judul lengkap" required /></label>
-            <label className="news-admin-field"><span className="news-admin-label"><strong>Judul kartu</strong><small>Opsional</small></span><input name="card_title" value={form.card_title} onChange={update} placeholder="Versi singkat untuk daftar" maxLength={120} /></label>
-            <label className="news-admin-field"><span className="news-admin-label"><strong>Kategori</strong><small>Wajib</small></span><input name="category" value={form.category} onChange={update} placeholder="Contoh: Riset" maxLength={80} required /></label>
+            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Judul berita<FieldRequirement /></strong></span><input name="title" value={form.title} onChange={update} placeholder="Masukkan judul lengkap" required /></label>
+            <label className="news-admin-field"><span className="news-admin-label"><strong>Judul kartu</strong></span><input name="card_title" value={form.card_title} onChange={update} placeholder="Versi singkat untuk daftar" maxLength={120} /></label>
+            <label className="news-admin-field"><span className="news-admin-label"><strong>Kategori<FieldRequirement /></strong></span><input name="category" value={form.category} onChange={update} placeholder="Contoh: Riset" maxLength={80} required /></label>
             <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Slug URL</strong><small>Otomatis jika kosong</small></span><input name="slug" value={form.slug} onChange={update} placeholder="agenda-riset-daerah" /></label>
-            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Ringkasan</strong><small>{form.summary.length}/500</small></span><textarea name="summary" value={form.summary} onChange={update} placeholder="Ringkasan singkat yang tampil pada kartu berita" maxLength={500} required /></label>
-            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Isi berita</strong><small>Wajib</small></span><textarea className="news-admin-content" name="content" value={form.content} onChange={update} placeholder="Tulis isi berita. Pisahkan paragraf dengan satu baris kosong." required /></label>
+            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Ringkasan<FieldRequirement /></strong><small>{form.summary.length}/500</small></span><textarea name="summary" value={form.summary} onChange={update} placeholder="Ringkasan singkat yang tampil pada kartu berita" maxLength={500} required /></label>
+            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Isi berita<FieldRequirement /></strong></span><textarea className="news-admin-content" name="content" value={form.content} onChange={update} placeholder="Tulis isi berita. Pisahkan paragraf dengan satu baris kosong." required /></label>
             <div className="news-admin-media is-wide">
-              <ImageUploadField key={`thumbnail-${fileInputKey}-${form.homepage_thumbnail?.name ?? 'empty'}-${form.homepage_thumbnail?.lastModified ?? 0}`} name="homepage_thumbnail" label="Thumbnail homepage" hint="Disarankan landscape 16:9, minimal 1200 x 675 px. Maksimal 5 MB." file={form.homepage_thumbnail} existingUrl={editingMedia.homepage_thumbnail_url} inputKey={`thumbnail-${fileInputKey}`} onChange={update} className="is-homepage-thumbnail" />
+              <ImageUploadField key={`thumbnail-${fileInputKey}-${form.homepage_thumbnail?.name ?? 'empty'}-${form.homepage_thumbnail?.lastModified ?? 0}`} name="homepage_thumbnail" label="Thumbnail homepage" hint="Disarankan landscape 16:9, minimal 1200 x 675 px. Maksimal 5 MB." file={form.homepage_thumbnail} existingUrl={editingMedia.homepage_thumbnail_url} inputKey={`thumbnail-${fileInputKey}`} onChange={update} className="is-homepage-thumbnail" required />
               <ImageUploadField key={`image-${fileInputKey}-${form.image?.name ?? 'empty'}-${form.image?.lastModified ?? 0}`} name="image" label="Gambar utama / poster" hint="Ditampilkan pada halaman detail berita. Maksimal 5 MB." file={form.image} existingUrl={editingMedia.image_url} inputKey={`image-${fileInputKey}`} onChange={update} />
               <ImageUploadField key={`secondary-${fileInputKey}-${form.secondary_image?.name ?? 'empty'}-${form.secondary_image?.lastModified ?? 0}`} name="secondary_image" label="Gambar tambahan" hint="Dokumentasi tambahan, maksimal 5 MB." file={form.secondary_image} existingUrl={editingMedia.secondary_image_url} inputKey={`secondary-${fileInputKey}`} onChange={update} />
             </div>
-            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Status publikasi</strong><small>Wajib</small></span><select name="status" value={form.status} onChange={update}><option value="draft">Simpan sebagai draft</option><option value="published">Terbitkan ke publik</option></select><small className="news-admin-help">Berita draft tidak akan muncul pada Beranda maupun arsip publik.</small></label>
+            <label className="news-admin-field is-wide"><span className="news-admin-label"><strong>Status publikasi<FieldRequirement /></strong></span><select name="status" value={form.status} onChange={update}><option value="draft">Simpan sebagai draft</option><option value="published">Terbitkan ke publik</option></select><small className="news-admin-help">Berita draft tidak akan muncul pada Beranda maupun arsip publik.</small></label>
           </div>
           <footer className="news-admin-editor-actions"><button className="secondary-form-button" type="button" onClick={resetForm}><RotateCcw size={15} aria-hidden="true" /> Reset</button><button className="primary-form-button" type="submit" disabled={isSaving}>{isSaving ? 'Menyimpan...' : editingId ? 'Simpan Perubahan' : 'Simpan Berita'}</button></footer>
         </form>

@@ -22,7 +22,7 @@ const menuItems = [
     adminOnly: true,
     submenu: [
       { label: 'Proposal Riset', href: '/riset/proposal', desc: 'Ajukan dan kelola proposal riset' },
-      { label: 'Hasil Riset', href: '/riset/hasil', desc: 'Kelola proposal riset yang dikirim' },
+      { label: 'Hasil Riset', href: '/riset/hasil', desc: 'Kelola proposal terkirim dan draft' },
     ],
   },
   {

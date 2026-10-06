@@ -1,5 +1,6 @@
 import { CalendarDays, ClipboardCheck, FileText, Megaphone, Send } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import FieldRequirement from '../components/FieldRequirement'
 import Pagination from '../components/Pagination'
 import ServicePageHeader from '../components/ServicePageHeader'
 import api from '../services/api'
@@ -145,21 +146,21 @@ function CompetitionRegistrationPage() {
         <header>
           <span>Formulir publik</span>
           <h2 id="competition-registration-title">Daftar sebagai peserta</h2>
-          <p>Seluruh kolom wajib diisi dengan data yang benar.</p>
+          <p>Lengkapi data pendaftaran dengan benar sebelum mengirim.</p>
         </header>
         <form onSubmit={submitRegistration}>
           <fieldset>
             <legend>Pilihan Lomba</legend>
             <div className="competition-registration-fields">
               <label>
-                <span>Jenis lomba</span>
+                <span>Jenis lomba<FieldRequirement /></span>
                 <select name="type" value={registration.type} onChange={updateRegistration} required disabled={optionsLoading}>
                   <option value="">Pilih jenis lomba</option>
                   {types.map((type) => <option value={type} key={type}>{type}</option>)}
                 </select>
               </label>
               <label>
-                <span>Nama lomba</span>
+                <span>Nama lomba<FieldRequirement /></span>
                 <select name="competition_id" value={registration.competition_id} onChange={updateRegistration} required disabled={!registration.type || optionsLoading}>
                   <option value="">{registration.type ? 'Pilih nama lomba' : 'Pilih jenis lomba terlebih dahulu'}</option>
                   {availableCompetitions.map((competition) => <option value={competition.id} key={competition.id}>{competition.name}</option>)}
@@ -173,19 +174,19 @@ function CompetitionRegistrationPage() {
             <legend>Pendaftaran</legend>
             <div className="competition-registration-fields">
               <label>
-                <span>Nama</span>
+                <span>Nama<FieldRequirement /></span>
                 <input name="name" value={registration.name} onChange={updateRegistration} maxLength="255" autoComplete="name" placeholder="Nama lengkap peserta" required />
               </label>
               <label>
-                <span>NIK</span>
+                <span>NIK<FieldRequirement /></span>
                 <input name="nik" value={registration.nik} onChange={updateRegistration} inputMode="numeric" pattern="[0-9]{16}" minLength="16" maxLength="16" autoComplete="off" placeholder="16 digit NIK" required />
               </label>
               <label className="is-wide">
-                <span>Alamat</span>
+                <span>Alamat<FieldRequirement /></span>
                 <textarea name="address" value={registration.address} onChange={updateRegistration} maxLength="1000" autoComplete="street-address" placeholder="Alamat lengkap peserta" required />
               </label>
               <label className="is-wide">
-                <span>Nama produk</span>
+                <span>Nama produk<FieldRequirement /></span>
                 <input name="product_name" value={registration.product_name} onChange={updateRegistration} maxLength="255" placeholder="Nama produk atau karya yang didaftarkan" required />
               </label>
             </div>

@@ -20,6 +20,14 @@ const initialForm = {
   pdf: null,
 }
 
+const RESEARCH_INSTITUTIONS = [
+  'Universitas Tadulako',
+  'UIN Datokarama Palu',
+  'Universitas Alkhairaat',
+  'STMIK Bina Mulia',
+]
+const OTHER_INSTITUTION = 'Institusi Lainnya'
+
 const chapters = [
   { name: 'chapter_one', label: 'BAB I', sub: 'Pendahuluan, Permasalahan, Tujuan', placeholder: 'Tuliskan pendahuluan...' },
   { name: 'chapter_two', label: 'BAB II', sub: 'Rancang Bangun / Ringkasan', placeholder: 'Tuliskan ringkasan...' },
@@ -57,7 +65,10 @@ function ResearchProposalPage({ proposalId = null }) {
   const [proposalStatus, setProposalStatus] = useState('draft')
   const [existingPdfUrl, setExistingPdfUrl] = useState('')
   const [reviewOpen, setReviewOpen] = useState(false)
+  const [completion, setCompletion] = useState(null)
+  const [isCustomInstitution, setIsCustomInstitution] = useState(false)
   const savingRef = useRef(false)
+  const cardWrapRef = useRef(null)
   const { isAuthenticated } = useAuth()
   const isEditing = Boolean(proposalId)
 
@@ -77,6 +88,7 @@ function ResearchProposalPage({ proposalId = null }) {
           chapter_three: proposal.chapter_three ?? '',
           pdf: null,
         })
+        setIsCustomInstitution(Boolean(proposal.institution && !RESEARCH_INSTITUTIONS.includes(proposal.institution)))
         setExistingPdfName(proposal.pdf_original_name ?? '')
         setExistingPdfUrl(proposal.pdf_url ?? '')
         setProposalStatus(proposal.status ?? 'draft')
@@ -89,6 +101,25 @@ function ResearchProposalPage({ proposalId = null }) {
     const { name, value, files } = event.target
     setForm((current) => ({ ...current, [name]: files ? files[0] ?? null : value }))
     setErrors((current) => ({ ...current, [name]: undefined }))
+  }
+
+  const updateInstitution = (event) => {
+    const { value } = event.target
+    if (value === OTHER_INSTITUTION) {
+      setIsCustomInstitution(true)
+      setForm((current) => ({ ...current, institution: '' }))
+      setErrors((current) => ({ ...current, institution: undefined }))
+      return
+    }
+
+    setIsCustomInstitution(false)
+    updateField(event)
+  }
+
+  const selectInstitutionFromList = () => {
+    setIsCustomInstitution(false)
+    setForm((current) => ({ ...current, institution: '' }))
+    setErrors((current) => ({ ...current, institution: undefined }))
   }
 
   const setPdfFile = (file) => {
@@ -119,6 +150,28 @@ function ResearchProposalPage({ proposalId = null }) {
     setReviewOpen(true)
   }
 
+  const navigateTo = (destination, state = {}) => {
+    window.history.pushState(state, '', destination)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
+
+  const startAnotherProposal = () => {
+    setForm(initialForm)
+    setIsCustomInstitution(false)
+    setErrors({})
+    setFeedback(null)
+    setCompletion(null)
+    cardWrapRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+      block: 'start',
+    })
+  }
+
+  const viewSavedProposal = () => {
+    if (!completion) return
+    navigateTo(completion.action === 'draft' ? '/riset/hasil#draft' : '/riset/hasil')
+  }
+
   const submitProposal = async (action) => {
     if (savingRef.current) return
     savingRef.current = true
@@ -137,20 +190,24 @@ function ResearchProposalPage({ proposalId = null }) {
     try {
       const endpoint = isEditing ? `/research-proposals/${proposalId}` : '/research-proposals'
       const response = await api.post(endpoint, payload)
-      setFeedback({ type: 'success', message: response.data.message })
-      const fileInput = document.getElementById('proposal-pdf')
-      if (fileInput) fileInput.value = ''
+      if (isEditing) {
+        if (proposalStatus === 'draft' && action === 'submit') {
+          navigateTo('/riset/hasil', { researchSuccess: response.data.message })
+          return
+        }
 
-      if (!isEditing) setForm(initialForm)
-
-      window.setTimeout(() => {
-        const destination = action === 'draft'
-          ? '/riset/draft'
-          : isEditing ? `/riset/hasil/${proposalId}` : '/riset/hasil'
-
-        window.history.pushState({}, '', destination)
-        window.dispatchEvent(new PopStateEvent('popstate'))
-      }, 700)
+        setFeedback({ type: 'success', message: response.data.message })
+        window.setTimeout(() => {
+          navigateTo(action === 'draft' ? '/riset/hasil#draft' : `/riset/hasil/${proposalId}`)
+        }, 700)
+      } else {
+        setFeedback(null)
+        setCompletion({ action, message: response.data.message })
+        cardWrapRef.current?.scrollIntoView({
+          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+          block: 'start',
+        })
+      }
     } catch (error) {
       if (error.response?.status === 422) {
         const validationErrors = error.response.data.errors ?? {}
@@ -197,12 +254,25 @@ function ResearchProposalPage({ proposalId = null }) {
     <section className="riset-page">
       <ServicePageHeader narrow section="Riset" title={isEditing ? 'Edit Proposal Riset' : 'Pengajuan Proposal Riset'} description="Sampaikan gagasan riset dan berkas pendukung Anda." action={<span className="form-status"><FileText size={16} aria-hidden="true" />{isEditing ? (proposalStatus === 'draft' ? 'Draft' : 'Diajukan') : 'Proposal baru'}</span>} />
 
-      <div className="riset-card-wrap">
-        {!isLoading && <FormProgress sections={completeness} />}
+      <div className="riset-card-wrap" ref={cardWrapRef}>
+        {!isLoading && !completion && <FormProgress sections={completeness} />}
         <div className="riset-card">
-          {feedback && <div className={`form-feedback ${feedback.type}`} role="status">{feedback.message}</div>}
-
-          {isLoading ? <div className="form-loading">Memuat data proposal...</div> : (
+          {completion ? (
+            <div className="riset-completion form-feedback success" role="status">
+              <h2>{completion.action === 'draft' ? 'Draft berhasil disimpan' : 'Proposal berhasil dikirim'}</h2>
+              <p>{completion.message}</p>
+              <p>{completion.action === 'draft' ? 'Apa yang ingin Anda lakukan selanjutnya?' : 'Proposal Anda sudah masuk ke Hasil Riset.'}</p>
+              <div className="riset-completion-actions">
+                <button className="secondary-form-button" type="button" onClick={startAnotherProposal}>Input Proposal Lagi</button>
+                <button className="primary-form-button" type="button" onClick={viewSavedProposal}>
+                  {completion.action === 'draft' ? 'Lihat Draft Saya' : 'Lihat Hasil Riset'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {feedback && <div className={`form-feedback ${feedback.type}`} role="status">{feedback.message}</div>}
+              {isLoading ? <div className="form-loading">Memuat data proposal...</div> : (
             <form onSubmit={event => { event.preventDefault(); requestReview() }} noValidate>
               <p className="form-completion-note form-note-inset">Bagian wajib diperlukan untuk mengirim. Draft dapat disimpan sebelum lengkap.</p>
 
@@ -242,15 +312,23 @@ function ResearchProposalPage({ proposalId = null }) {
                   <label className="riset-field"><span className="field-label">Asal Universitas/PT<FieldRequirement /></span>
                     <div className="riset-input-wrap">
                       <IconBuilding />
-                      <select aria-required="true" aria-invalid={Boolean(errors.institution)} name="institution" value={form.institution} onChange={updateField}>
-                        <option value="">Pilih Institusi</option>
-                        <option>Universitas Tadulako</option>
-                        <option>UIN Datokarama Palu</option>
-                        <option>Universitas Alkhairaat</option>
-                        <option>STMIK Bina Mulia</option>
-                        <option>Institusi Lainnya</option>
-                      </select>
-                      <IconChevron />
+                      {isCustomInstitution ? (
+                        <>
+                          <input aria-required="true" aria-invalid={Boolean(errors.institution)} name="institution" value={form.institution} onChange={updateField} maxLength={180} placeholder="Ketik nama universitas/PT" />
+                          <button className="inovasi-chevron-button" type="button" aria-label="Pilih institusi dari daftar" onClick={selectInstitutionFromList}>
+                            <IconChevron aria-hidden="true" />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <select aria-required="true" aria-invalid={Boolean(errors.institution)} name="institution" value={form.institution} onChange={updateInstitution}>
+                            <option value="">Pilih Institusi</option>
+                            {RESEARCH_INSTITUTIONS.map((institution) => <option key={institution} value={institution}>{institution}</option>)}
+                            <option value={OTHER_INSTITUTION}>{OTHER_INSTITUTION}</option>
+                          </select>
+                          <IconChevron />
+                        </>
+                      )}
                     </div>
                     {errors.institution && <small className="field-error">{errors.institution}</small>}
                   </label>
@@ -305,7 +383,7 @@ function ResearchProposalPage({ proposalId = null }) {
               <div className="riset-footer-bar">
                 <div className="form-actions" style={{ margin: 0 }}>
                   {isEditing ? (
-                    <a className="secondary-form-link" href={proposalStatus === 'draft' ? '/riset/draft' : `/riset/hasil/${proposalId}`}>Batal</a>
+                    <a className="secondary-form-link" href={proposalStatus === 'draft' ? '/riset/hasil#draft' : `/riset/hasil/${proposalId}`}>Batal</a>
                   ) : (
                     <button className="secondary-form-button" type="button" disabled={isSaving} onClick={() => submitProposal('draft')}>Simpan Draft</button>
                   )}
@@ -318,6 +396,8 @@ function ResearchProposalPage({ proposalId = null }) {
                 </div>
               </div>
             </form>
+              )}
+            </>
           )}
         </div>
       </div>

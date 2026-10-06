@@ -1,6 +1,7 @@
 import { CalendarDays, Edit3, FileText, Plus, RotateCcw, Search, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import DeleteCompetitionModal from '../components/DeleteCompetitionModal'
+import FieldRequirement from '../components/FieldRequirement'
 import FilterSummary from '../components/FilterSummary'
 import Pagination from '../components/Pagination'
 import ServicePageHeader from '../components/ServicePageHeader'
@@ -159,15 +160,15 @@ function AdminCompetitionsPage() {
           </header>
 
           <div className="competition-fields">
-            <label><span><strong>Kode lomba</strong><small>Wajib dan unik</small></span><input name="code" value={form.code} onChange={update} maxLength="50" placeholder="Contoh: LMB-2026-01" required /></label>
-            <label><span><strong>Nama lomba</strong><small>Wajib</small></span><input name="name" value={form.name} onChange={update} maxLength="255" placeholder="Nama kegiatan lomba" required /></label>
-            <label className="is-wide"><span><strong>Deskripsi lomba</strong><small>{form.description.length}/3000</small></span><textarea name="description" value={form.description} onChange={update} maxLength="3000" placeholder="Jelaskan tujuan, tema, dan informasi utama lomba" required /></label>
-            <label><span><strong>Tanggal pembukaan</strong><small>Wajib</small></span><input name="opening_date" type="date" value={form.opening_date} onChange={update} required /></label>
-            <label><span><strong>Tanggal penutupan</strong><small>Wajib</small></span><input name="closing_date" type="date" value={form.closing_date} min={form.opening_date || undefined} onChange={update} required /></label>
-            <label><span><strong>Status</strong><small>Wajib</small></span><select name="status" value={form.status} onChange={update}><option value="open">Buka</option><option value="closed">Tutup</option></select></label>
-            <label><span><strong>Jenis lomba</strong><small>Wajib</small></span><select name="type" value={form.type} onChange={update}>{competitionTypes.map((type) => <option value={type} key={type}>{type}</option>)}</select></label>
+            <label><span><strong>Kode lomba<FieldRequirement /></strong></span><input name="code" value={form.code} onChange={update} maxLength="50" placeholder="Contoh: LMB-2026-01" required /></label>
+            <label><span><strong>Nama lomba<FieldRequirement /></strong></span><input name="name" value={form.name} onChange={update} maxLength="255" placeholder="Nama kegiatan lomba" required /></label>
+            <label className="is-wide"><span><strong>Deskripsi lomba<FieldRequirement /></strong><small>{form.description.length}/3000</small></span><textarea name="description" value={form.description} onChange={update} maxLength="3000" placeholder="Jelaskan tujuan, tema, dan informasi utama lomba" required /></label>
+            <label><span><strong>Tanggal pembukaan<FieldRequirement /></strong></span><input name="opening_date" type="date" value={form.opening_date} onChange={update} required /></label>
+            <label><span><strong>Tanggal penutupan<FieldRequirement /></strong></span><input name="closing_date" type="date" value={form.closing_date} min={form.opening_date || undefined} onChange={update} required /></label>
+            <label><span><strong>Status<FieldRequirement /></strong></span><select name="status" value={form.status} onChange={update}><option value="open">Buka</option><option value="closed">Tutup</option></select></label>
+            <label><span><strong>Jenis lomba<FieldRequirement /></strong></span><select name="type" value={form.type} onChange={update}>{competitionTypes.map((type) => <option value={type} key={type}>{type}</option>)}</select></label>
             <label className="competition-guideline is-wide">
-              <span><strong>Juknis</strong><small>{editingId ? 'Opsional saat edit' : 'Wajib'}</small></span>
+              <span><strong>Juknis<FieldRequirement required={!editingId} /></strong></span>
               <div><Upload size={20} aria-hidden="true" /><strong>{form.guideline?.name || savedGuideline || 'Pilih file Juknis'}</strong><small>PDF, maksimal 10 MB</small></div>
               <input key={fileKey} name="guideline" type="file" accept="application/pdf,.pdf" onChange={update} required={!editingId} />
             </label>
