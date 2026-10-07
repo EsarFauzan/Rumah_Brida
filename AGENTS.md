@@ -16,8 +16,8 @@ Fitur yang sudah tersedia:
 - Login khusus administrator (`admin` dan `superadmin`) dengan token Sanctum;
   registrasi publik dinonaktifkan.
 - Pengajuan proposal riset dan simpan draft (wajib login).
-- Halaman Draft Saya untuk melihat, melanjutkan edit, membuka detail/PDF, dan menghapus draft milik sendiri.
-- Daftar hasil/proposal yang sudah dikirim.
+- Hasil Riset menggabungkan tabel proposal terkirim dan draft milik sendiri;
+  draft dapat dilanjutkan, dibuka detail/PDF, atau dihapus.
 - Detail, edit, lihat PDF, dan hapus proposal (hanya oleh pemilik). Hapus
   dikonfirmasi lewat dialog in-app, bukan `window.confirm()`.
 - Info Publik berupa tabel inovasi dan tautan dokumen publik.
@@ -91,7 +91,6 @@ frontend/
   src/pages/AdminNewsPage.jsx            Form dan daftar kelola berita admin
   src/pages/NewsArchivePage.jsx       Arsip berita publik, pencarian, dan pagination
   src/pages/NewsDetailPage.jsx        Detail berita
-  src/pages/ResearchDraftsPage.jsx    Daftar draft milik akun aktif
   src/pages/ResearchProposalPage.jsx  Form tambah dan edit proposal
   src/pages/ResearchResultsPage.jsx   Daftar proposal submitted
   src/pages/ResearchProposalDetailPage.jsx
@@ -166,8 +165,8 @@ backend/
 | `/admin` | Panel modul operasional, khusus admin/superadmin |
 | `/admin/administrators` | Kelola akun admin, khusus superadmin |
 | `/riset/proposal` | Form proposal baru |
-| `/riset/draft` | Daftar draft milik akun aktif |
-| `/riset/hasil` | Daftar proposal terkirim |
+| `/riset/draft` | Redirect kompatibilitas ke bagian Draft Saya pada `/riset/hasil` |
+| `/riset/hasil` | Tabel draft milik sendiri dan proposal terkirim |
 | `/riset/hasil/{id}` | Detail proposal |
 | `/riset/proposal/{id}/edit` | Edit proposal |
 | `/admin/berita` | Kelola berita, khusus admin |
@@ -203,7 +202,7 @@ Admin masuk melalui /admin/login
        -> status `draft`
        -> boleh belum lengkap
        -> hanya terlihat oleh pemiliknya
-       -> tersedia di halaman Draft Saya (`/riset/draft`)
+       -> tersedia pada tabel Draft Saya di `/riset/hasil`
   -> Kirim Proposal
        -> semua field dan PDF wajib
        -> status `submitted`
@@ -224,13 +223,15 @@ backend menghapus file lama. Saat proposal dihapus, record MySQL dan PDF ikut
 dihapus. Update sebagian hanya menulis kolom yang benar-benar dikirim, jadi
 menyimpan draft dengan sebagian field tidak mengosongkan data lain.
 
-Halaman `Draft Saya` memanggil `GET /api/research-proposals?status=draft`.
-Endpoint tersebut hanya mengembalikan draft milik akun aktif.
+Tabel Draft Saya pada halaman `/riset/hasil` memanggil
+`GET /api/research-proposals?status=draft`. Endpoint tersebut hanya
+mengembalikan draft milik akun aktif. Route lama `/riset/draft` mengarahkan
+pengguna ke bagian tabel draft yang sama.
 Saat mengedit draft, tersedia tombol `Simpan Draft` dan `Kirim Proposal` terpisah;
 menyimpan draft tidak mengubah status menjadi `submitted`.
 
-Tombol `Hapus` di Hasil Riset, Draft Saya, dan Detail Proposal tidak lagi memakai
-`window.confirm()`. Ketiganya membuka `DeleteProposalModal` yang menampilkan judul
+Tombol `Hapus` di kedua tabel Hasil Riset dan Detail Proposal tidak lagi memakai
+`window.confirm()`. Semuanya membuka `DeleteProposalModal` yang menampilkan judul
 proposal, dan permintaan DELETE baru dikirim setelah tombol `Hapus Proposal` di
 dialog ditekan. Logika hapus, endpoint, dan pesan error tidak berubah; yang
 berubah hanya mekanisme konfirmasinya.
@@ -477,12 +478,14 @@ tiga data berita awal tanpa gambar; unggah gambar melalui `/admin/berita`.
 
 Gambar yang diunggah dioptimalkan di `NewsController::optimizeImage()` memakai
 GD: sisi terpanjang dibatasi 1600px (bicubic) lalu dienkode ulang sebagai WebP
-kualitas 82. Hasil hanya dipakai bila lebih kecil dari asli; jika gambar tidak
-dapat diproses (mis. berkas palsu di test, SVG, GIF animasi), asli disimpan apa
-adanya sehingga endpoint tidak pernah gagal karena optimasi. Validasi tetap
-`image|max:5120` sebelum optimasi. Gambar lama sebelum fitur ini tidak diproses
-ulang. Batasan: rotasi EXIF foto ponsel belum ditangani (ekstensi `exif` tidak
-aktif); aktifkan bila orientasi miring menjadi masalah.
+kualitas 82. Hasil hanya dipakai bila lebih kecil dari asli. Jika GD/dukungan
+WebP tidak tersedia atau gambar tidak dapat diproses (mis. berkas palsu di
+test, SVG, GIF animasi), asli disimpan apa adanya sehingga endpoint tidak gagal
+karena optimasi. Untuk mengaktifkan optimasi di XAMPP, aktifkan `extension=gd`
+di `php.ini`, pastikan dukungan WebP tersedia, lalu restart Apache. Validasi
+tetap `image|max:5120` sebelum optimasi. Gambar lama sebelum fitur ini tidak
+diproses ulang. Batasan: rotasi EXIF foto ponsel belum ditangani (ekstensi
+`exif` tidak aktif); aktifkan bila orientasi miring menjadi masalah.
 
 Perilaku yang harus dipertahankan:
 
@@ -834,9 +837,9 @@ Logika dialog (fokus trap, scroll lock, klik overlay, Escape) tinggal di
 dinamis, serta `labelIds` untuk id aria. Untuk kebutuhan hapus baru, buat
 wrapper lain di atas `DeleteItemModal`; jangan menyalin ulang logika dialog.
 
-`DeleteProposalModal` tetap dipakai bersama oleh `ResearchResultsPage.jsx`,
-`ResearchDraftsPage.jsx`, dan `ResearchProposalDetailPage.jsx`; judul proposal
-wajib dinamis dan jika kosong tampil `proposal tanpa judul`.
+`DeleteProposalModal` dipakai bersama oleh `ResearchResultsPage.jsx` dan
+`ResearchProposalDetailPage.jsx`; judul proposal wajib dinamis dan jika kosong
+tampil `proposal tanpa judul`.
 `DeleteNewsModal` dipakai `AdminNewsPage.jsx` untuk hapus berita.
 
 Perilaku yang harus dipertahankan:
@@ -884,8 +887,9 @@ seeder diverifikasi utuh. Skrip uji sementara sudah dihapus, bukan bagian repo.
 
 ## 10. Menjalankan Lokal
 
-Prasyarat: PHP 8.3+ dengan ekstensi GD (wajib untuk optimasi gambar berita),
-Composer, MySQL, dan Node.js 22.13+.
+Prasyarat: PHP 8.3+, Composer, MySQL, dan Node.js 22.13+. Ekstensi GD dengan
+dukungan WebP diperlukan untuk optimasi gambar berita; jika tidak tersedia,
+backend tetap menyimpan gambar asli tanpa optimasi.
 
 Siapkan MySQL satu kali:
 
@@ -969,8 +973,8 @@ berita ada di disk `public`, berbeda dengan PDF proposal.
 
 ## 12. Batasan dan Prioritas Lanjutan
 
-Autentikasi, otorisasi, rate limiting, akses PDF privat, halaman Draft Saya,
-dialog konfirmasi hapus proposal dan berita, serta
+Autentikasi, otorisasi, rate limiting, akses PDF privat, tabel Draft Saya di
+Hasil Riset, dialog konfirmasi hapus proposal dan berita, serta
 berita dari database dengan kelola berita admin sudah tersedia. Sisa prioritas, diurutkan
 dari yang paling murah dan paling mendesak:
 
@@ -1608,12 +1612,13 @@ Dependency legacy yang sengaja tetap ada:
 - role `researcher`, record user lama, `research_proposals.user_id`, status
   draft/submitted, relasi inovasi ke pemilik, dan personal access token tidak
   dimigrasikan atau dihapus;
-- policy view/update/delete pemilik, endpoint proposal/inovasi lama, halaman
-  Draft Saya, serta komponen form/detail tetap berada di codebase;
+- policy view/update/delete pemilik, endpoint proposal/inovasi lama, tabel
+  Draft Saya yang kini berada di halaman Hasil Riset, serta komponen form/detail
+  tetap berada di codebase;
 - token researcher yang pernah diterbitkan tetap dibatasi policy lama sampai
   token tersebut dicabut. Tidak ada UI atau endpoint register/login baru untuk
   menerbitkan sesi researcher;
-- akibat refactor, pengajuan proposal, Draft Saya, input/edit inovasi, dan
+- akibat refactor, pengajuan proposal, tabel Draft Saya, input/edit inovasi, dan
   halaman pengelolaan terkait tidak lagi dapat dimulai oleh peneliti dari situs
   publik. Produk perlu keputusan migrasi terpisah jika alur peneliti akan
   diaktifkan kembali;
@@ -1731,6 +1736,54 @@ lulus; frontend 16 test, ESLint, dan build Vite (1928 modul) lulus. Audit
 Chrome headless pada 1440px dan 390px berhasil mengisi enam kontrol form,
 mengirim payload, menerima pesan sukses, dan tidak menemukan overflow
 horizontal.
+
+### Penyesuaian Urusan Pemerintahan Inovasi 30 September 2026
+
+Pada form Bentuk Inovasi, opsi urusan utama `Pelayanan Umum dan Tata Ruang`
+diganti menjadi `Pekerjaan Umum dan Tata Ruang`. Dropdown `Bentuk Inovasi Daerah`
+dan `Urusan Pemerintahan Utama` mempertahankan posisi serta struktur field yang
+sama. Saat opsi `Inovasi Daerah Lainnya` atau `Urusan Pemerintahan Lainnya`
+dipilih, field terkait berubah menjadi input teks di tempat yang sama; ikon
+panah tetap di dalam field dan dapat mengembalikan daftar pilihan. Tidak ada
+kolom tambahan.
+
+Nilai bebas disimpan langsung pada `innovations.innovation_type` atau
+`innovations.government_affair`, divalidasi sebagai teks maksimal 255 karakter,
+dan dimuat kembali sebagai input teks saat edit. Record lama yang berisi nilai
+custom atau label generik `Lainnya` juga dapat langsung diedit. Tidak ada
+migration atau perubahan struktur database.
+
+## 12O. Integrasi Draft dan Penyempurnaan Form 6 Oktober 2026
+
+- Draft dan proposal terkirim kini dikelola dalam dua tabel pada
+  `ResearchResultsPage.jsx`. Draft hanya dimuat untuk sesi yang sudah masuk;
+  pencarian dipakai bersama, tetapi pagination dan state loading/error tiap
+  tabel terpisah. Route lama `/riset/draft` tetap mengarahkan ke `#draft` pada
+  `/riset/hasil`.
+- Tabel draft menyediakan pratinjau PDF, detail, edit, dan hapus melalui
+  `DeleteProposalModal`; tabel terkirim mempertahankan aksi sesuai
+  `can_manage`. Penghapusan memuat ulang daftar. Perubahan ini menghapus
+  `ResearchDraftsPage.jsx`, bukan data atau endpoint draft.
+- Form proposal menyediakan pilihan institusi yang sudah dikenal dan opsi
+  `Institusi Lainnya` untuk memasukkan nama sendiri (maksimal 180 karakter).
+  Nilai institusi lama yang tidak ada di daftar tetap dapat diedit. Draft dapat
+  disimpan meski belum lengkap; pengiriman tetap divalidasi sebelum ringkasan
+  tinjauan dan konfirmasi.
+- Setelah penyimpanan, form menampilkan aksi untuk memulai proposal lain atau
+  kembali ke daftar yang sesuai. Mengirim draft yang sedang diedit kembali ke
+  Hasil Riset dengan notifikasi sukses; edit mempertahankan PDF lama bila
+  berkas baru tidak dipilih.
+- Form inovasi mempertahankan nilai pilihan bebas saat edit, termasuk data
+  lama dengan label generik `Lainnya`. Label wajib/opsional serta petunjuk
+  form admin lomba, berita, dan pendaftaran peserta diselaraskan.
+- Optimasi gambar berita memakai GD bila tersedia dan hanya memilih hasil WebP
+  bila encoding didukung serta ukuran hasil lebih kecil. Jika GD atau dukungan
+  WebP tidak tersedia, gambar asli tetap disimpan.
+
+Verifikasi: ESLint lulus; 20 test frontend lulus; build Vite sukses (1927
+modul); PHPUnit lulus dengan 79 test dan 460 assertion, 2 test diskip; Pint
+lulus untuk `NewsController.php`. PHPUnit dijalankan langsung dengan ekstensi
+SQLite XAMPP karena runtime PHP default belum memuat `pdo_sqlite`.
 
 ## 13. Alur Kerja Git
 

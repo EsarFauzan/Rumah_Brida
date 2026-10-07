@@ -13,6 +13,45 @@ class InnovationApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_innovation_type_and_government_affair_accept_custom_values(): void
+    {
+        $this->getJson('/api/innovations/options')->assertOk()
+            ->assertJsonFragment(['Inovasi Daerah Lainnya'])
+            ->assertJsonFragment(['Pekerjaan Umum dan Tata Ruang'])
+            ->assertJsonMissing(['Pelayanan Umum dan Tata Ruang']);
+
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $payload = [
+            'title' => 'Inovasi Urusan Lainnya',
+            'innovator_name' => 'Peneliti',
+            'innovation_type' => 'Inovasi Pelayanan Publik',
+            'government_affair' => 'Komunikasi dan Informatika',
+            'reporting_year' => 2026,
+        ];
+
+        $id = $this->postJson('/api/innovations', $payload)->assertCreated()
+            ->assertJsonPath('data.government_affair', 'Komunikasi dan Informatika')
+            ->json('data.id');
+        $this->assertDatabaseHas('innovations', [
+            'id' => $id,
+            'government_affair' => 'Komunikasi dan Informatika',
+        ]);
+
+        $customType = 'Inovasi Teknologi Tepat Guna';
+        $this->postJson('/api/innovations', array_merge($payload, [
+            'title' => 'Inovasi Bentuk Lainnya',
+            'innovation_type' => $customType,
+        ]))->assertCreated()->assertJsonPath('data.innovation_type', $customType);
+
+        $this->postJson('/api/innovations', array_merge($payload, [
+            'innovation_type' => str_repeat('A', 256),
+        ]))->assertUnprocessable()->assertJsonValidationErrors('innovation_type');
+
+        $this->postJson('/api/innovations', array_merge($payload, [
+            'government_affair' => str_repeat('A', 256),
+        ]))->assertUnprocessable()->assertJsonValidationErrors('government_affair');
+    }
+
     public function test_public_pdf_stream_uses_record_paths_and_cors(): void
     {
         Storage::fake('public');

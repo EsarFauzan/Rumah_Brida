@@ -182,7 +182,9 @@ class NewsController extends Controller
     private function optimizeImage(UploadedFile $file): ?UploadedFile
     {
         $processable = in_array($file->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true);
-        if (! $processable) {
+        if (! $processable
+            || ! function_exists('imagecreatefromstring')
+            || ! function_exists('imagewebp')) {
             return null;
         }
 

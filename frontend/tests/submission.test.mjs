@@ -39,3 +39,11 @@ test('inovasi tidak mewajibkan tanggal, OPD, nomor registrasi atau berkas', () =
     assert.ok(validateInnovation({ ...innovation, reporting_year }).reporting_year)
   }
 })
+test('urusan pemerintahan menerima teks bebas maksimal 255 karakter', () => {
+  assert.deepEqual(validateInnovation({ ...innovation, government_affair: 'Komunikasi dan Informatika' }), {})
+  assert.ok(validateInnovation({ ...innovation, government_affair: 'x'.repeat(256) }).government_affair)
+})
+test('bentuk inovasi menerima teks bebas maksimal 255 karakter', () => {
+  assert.deepEqual(validateInnovation({ ...innovation, innovation_type: 'Inovasi Teknologi Tepat Guna' }), {})
+  assert.ok(validateInnovation({ ...innovation, innovation_type: 'x'.repeat(256) }).innovation_type)
+})

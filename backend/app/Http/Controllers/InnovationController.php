@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Innovation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\Rule;
 
 class InnovationController extends Controller
 {
@@ -20,7 +19,7 @@ class InnovationController extends Controller
         'Kesehatan',
         'Trantibum Linmas',
         'Sosial',
-        'Pelayanan Umum dan Tata Ruang',
+        'Pekerjaan Umum dan Tata Ruang',
         'Perumahan Rakyat dan Kawasan Permukiman',
         'Urusan Pemerintahan Lainnya',
     ];
@@ -161,12 +160,12 @@ class InnovationController extends Controller
 
     private function validatePayload(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'innovator_name' => ['required', 'string', 'max:255'],
             'registration_number' => ['nullable', 'string', 'max:255'],
-            'innovation_type' => ['required', Rule::in(self::INNOVATION_TYPES)],
-            'government_affair' => ['required', Rule::in(self::GOVERNMENT_AFFAIRS)],
+            'innovation_type' => ['required', 'string', 'max:255'],
+            'government_affair' => ['required', 'string', 'max:255'],
             'regional_agency' => ['nullable', 'string', 'max:255'],
             'trial_date' => ['nullable', 'date'],
             'implementation_date' => ['nullable', 'date'],
@@ -175,5 +174,7 @@ class InnovationController extends Controller
             'report_pdf' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
             'reporting_year' => ['required', 'integer', 'min:2000', 'max:2100'],
         ]);
+
+        return $validated;
     }
 }

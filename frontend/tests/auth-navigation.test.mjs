@@ -10,6 +10,8 @@ const footer = source('../src/components/Footer.jsx')
 const login = source('../src/pages/LoginPage.jsx')
 const dashboard = source('../src/pages/AdminDashboardPage.jsx')
 const administrators = source('../src/pages/AdminAdministratorsPage.jsx')
+const researchResults = source('../src/pages/ResearchResultsPage.jsx')
+const researchProposal = source('../src/pages/ResearchProposalPage.jsx')
 
 test('semua route admin melewati guard role terpusat', () => {
   assert.match(app, /pathname === '\/admin' \|\| pathname\.startsWith\('\/admin\/'\)/)
@@ -34,6 +36,21 @@ test('navbar publik tidak menampilkan login atau modul operasional', () => {
 test('submenu daftar lomba hanya tersedia untuk administrator', () => {
   assert.match(header, /label: 'Daftar Lomba', href: '\/admin\/lomba'[^\n]*adminOnly: true/)
   assert.match(header, /item\.submenu\?\.filter\(\(subitem\) => !subitem\.adminOnly \|\| isAdministrator\)/)
+})
+
+test('hasil riset menggabungkan tabel proposal terkirim dan draft', () => {
+  assert.match(header, /label: 'Hasil Riset', href: '\/riset\/hasil'[^\n]*Kelola proposal terkirim dan draft/)
+  assert.match(app, /pathname === '\/riset\/draft'[\s\S]*?Redirect to="\/riset\/hasil#draft"/)
+  assert.match(researchResults, /status: 'submitted'/)
+  assert.match(researchResults, /status: 'draft'/)
+  assert.match(researchResults, /id="draft"/)
+  assert.match(researchResults, /id="submitted"/)
+})
+
+test('mengirim draft kembali ke hasil riset dengan notifikasi sukses', () => {
+  assert.match(researchProposal, /proposalStatus === 'draft' && action === 'submit'[\s\S]*?navigateTo\('\/riset\/hasil', \{ researchSuccess: response\.data\.message \}\)/)
+  assert.match(researchResults, /window\.history\.state\?\.researchSuccess/)
+  assert.match(researchResults, /className="research-success-toast" role="status"/)
 })
 
 test('admin dan superadmin berbagi akses operasional', () => {
