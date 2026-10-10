@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --font-display: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', 'Inter Variable', 'Segoe UI', Arial, sans-serif;
   --navy: #102a4e;
   --navy-deep: #071b35;
@@ -142,7 +142,7 @@
   --footer-link: #c3d2e4;
   --footer-social: #a9bad1;
   --form-heading: #dbe7f6;
-  /* Status & aksen semantik (dark) — teks dicerahkan, latar di-tint gelap */
+  /* Status & aksen semantik (dark) â€” teks dicerahkan, latar di-tint gelap */
   --accent-amber: #f0c05a;
   --accent-amber-deep: #edc26a;
   --accent-amber-ink: #f2cd7e;
@@ -1478,11 +1478,6 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .inovasi-field select { appearance: none; -webkit-appearance: none; cursor: pointer; }
 .inovasi-field input:focus, .inovasi-field select:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px var(--focus-ring-shadow); }
 
-.inovasi-timeline { display: flex; align-items: center; margin-bottom: 26px; padding: 0 4px 12px; }
-.inovasi-tl-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); flex: none; position: relative; }
-.inovasi-tl-dot em { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); font-size: 11px; font-style: normal; color: var(--text-faint); white-space: nowrap; }
-.inovasi-tl-line { flex: 1; height: 2px; background: var(--border-strong); margin: 0 6px; }
-
 .inovasi-drop {
   border: 1.5px dashed var(--border-input); border-radius: 8px; padding: 20px; text-align: center;
   background: var(--bg-soft); cursor: pointer; transition: border-color 150ms ease, background-color 150ms ease; position: relative; display: block;
@@ -1568,6 +1563,48 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 }
 .site-shell :is(.public-info-toolbar, .if-toolbar, .research-results-toolbar) {
   margin: 24px 0;
+}
+
+/* --- Perapian form riset & inovasi (7 Oktober 2026): kontrol serasi, lebih tenang --- */
+
+/* Kartu form: shadow lebih lembut */
+.riset-page .riset-card,
+.inovasi-page .inovasi-form-card.research-form-card { box-shadow: var(--shadow-sm); }
+
+/* Nomor bagian: outline ringan, bukan kotak berlatar */
+.riset-section-num,
+.inovasi-section-num {
+  width: 26px; height: 26px; border-radius: 8px; background: transparent;
+  border: 1.5px solid var(--border-strong); color: var(--navy); font-size: 12.5px;
+}
+
+/* Section lebih lega, divider lebih lembut */
+.riset-section,
+.inovasi-section { padding: 30px 34px; }
+
+/* Radius kontrol disamakan ke 8px + state hover halus */
+.riset-field input, .riset-field select,
+.inovasi-field input, .inovasi-field select { border-radius: 8px; }
+.riset-field input:hover:not(:focus), .riset-field select:hover:not(:focus),
+.inovasi-field input:hover:not(:focus), .inovasi-field select:hover:not(:focus) { border-color: var(--input-border-strong); }
+.riset-chapter textarea { border-radius: 8px; }
+.riset-chapter textarea:hover:not(:focus) { border-color: var(--input-border-strong); }
+
+/* Upload drop zone lebih tenang */
+.riset-drop, .inovasi-drop {
+  border-color: var(--border-strong); padding: 22px 20px; background: transparent;
+}
+.riset-upicon, .inovasi-upicon { width: 22px; height: 22px; margin-bottom: 6px; }
+
+/* File chip lebih ringan */
+.riset-file-chip, .inovasi-file-chip { border-color: var(--border-input); border-radius: 8px; }
+
+/* Sidebar langkah inovasi lebih tenang */
+.inovasi-steps { border-color: var(--border-input); box-shadow: var(--shadow-sm); }
+
+@media (max-width: 900px) {
+  .riset-section,
+  .inovasi-section { padding: 24px 20px; }
 }
 .site-shell :is(.public-info-search, .if-search, .research-results-search,
   .public-info-year, .if-year-select, .research-results-submit) {
@@ -1712,3 +1749,393 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
     color: var(--muted); font-size: 12px; font-weight: 600;
   }
 }
+
+/* Input inovasi: one-page progressive disclosure with a calm, friendly surface. */
+.inovasi-page .service-page-header {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--focus-tint) 58%, var(--surface)) 0%, var(--surface) 100%);
+}
+.inovasi-page .service-page-header-inner { max-width: 1160px; }
+.inovasi-page .service-page-heading p { max-width: 580px; }
+.inovasi-layout {
+  max-width: 1160px;
+  margin: 32px auto 64px;
+  grid-template-columns: 228px minmax(0, 1fr);
+  gap: 28px;
+}
+.inovasi-steps {
+  padding: 10px;
+  border-color: var(--border);
+  border-radius: 16px;
+  box-shadow: none;
+  background: color-mix(in srgb, var(--surface) 94%, var(--focus-tint));
+}
+.inovasi-step {
+  min-height: 58px;
+  padding: 11px 12px;
+  border-radius: 10px;
+  transition: background-color 180ms ease, color 180ms ease;
+}
+.inovasi-step:hover { background: var(--surface-hover); }
+.inovasi-step:focus-visible { outline: 3px solid var(--focus-ring-shadow); outline-offset: 2px; }
+.inovasi-step-badge {
+  width: 30px;
+  height: 30px;
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text-faint);
+  transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease;
+}
+.inovasi-step.active { background: var(--focus-tint); }
+.inovasi-step.active .inovasi-step-badge { border-color: var(--yellow); background: var(--yellow); color: var(--on-yellow); }
+.inovasi-step.done .inovasi-step-badge { border-color: var(--success); background: var(--success); color: #fff; }
+.inovasi-step-title { color: var(--text-secondary); font-size: 13px; line-height: 1.3; }
+.inovasi-step-desc { margin-top: 2px; color: var(--text-faint); font-size: 11px; line-height: 1.4; }
+.inovasi-page .inovasi-form-card.research-form-card {
+  border-color: var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.inovasi-progress-panel {
+  display: grid;
+  grid-template-columns: minmax(190px, .8fr) minmax(0, 1.7fr);
+  align-items: center;
+  gap: 28px;
+  margin: 0 0 16px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  animation: inovasi-enter 360ms cubic-bezier(.22,.8,.24,1) both;
+}
+.inovasi-progress-intro { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.inovasi-progress-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--accent-amber-ink);
+  background: var(--amber-tint-soft);
+  border: 1px solid var(--amber-line);
+  border-radius: 11px;
+}
+.inovasi-progress-intro strong, .inovasi-progress-intro span { display: block; }
+.inovasi-progress-intro strong { color: var(--form-heading); font-size: 13px; line-height: 1.35; }
+.inovasi-progress-intro span { margin-top: 3px; color: var(--muted); font-size: 11.5px; line-height: 1.45; }
+.inovasi-progress-panel .form-completion { margin: 0; }
+.inovasi-progress-panel .form-completion li { color: var(--text-faint); }
+.inovasi-progress-panel .form-completion .is-done { color: var(--success); }
+.inovasi-section {
+  padding: 32px 34px;
+  border-color: var(--border);
+  scroll-margin-top: calc(var(--header-height) + 24px);
+  animation: inovasi-section-enter 420ms cubic-bezier(.22,.8,.24,1) both;
+}
+.inovasi-section:nth-of-type(2) { animation-delay: 45ms; }
+.inovasi-section:nth-of-type(3) { animation-delay: 90ms; }
+.inovasi-section:nth-of-type(4) { animation-delay: 135ms; }
+.inovasi-section-head { align-items: flex-start; justify-content: flex-start; margin-bottom: 24px; text-align: left; }
+.inovasi-section-num {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--navy);
+  background: var(--focus-tint);
+  font-size: 13px;
+}
+.inovasi-section-head h3 { color: var(--form-heading); font-size: 17px; line-height: 1.3; }
+.inovasi-section-head p { max-width: 56ch; margin-top: 4px; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+.inovasi-grid2 { gap: 22px 20px; }
+.inovasi-field { gap: 8px; color: var(--text-secondary); font-size: 13px; }
+.inovasi-field input, .inovasi-field select {
+  height: 46px;
+  border-radius: 10px;
+  color: var(--text-primary);
+  background: var(--surface);
+  font-size: 14px;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.inovasi-field input:hover:not(:focus), .inovasi-field select:hover:not(:focus) { border-color: var(--input-border-strong); }
+.inovasi-field input:focus, .inovasi-field select:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 4px var(--focus-ring-shadow);
+}
+.inovasi-field input[aria-invalid='true'], .inovasi-field select[aria-invalid='true'] {
+  border-color: var(--danger-line);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger-line) 24%, transparent);
+}
+.field-error { display: block; margin-top: -1px; color: var(--danger); font-size: 12px; line-height: 1.45; }
+.inovasi-file-label { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); }
+.inovasi-file-label svg { color: var(--navy); }
+.inovasi-drop {
+  min-height: 130px;
+  display: grid;
+  place-content: center;
+  padding: 20px;
+  border-color: var(--border-input);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-soft) 76%, var(--surface));
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+.inovasi-drop:hover, .inovasi-drop.drag { border-color: var(--focus-ring); background: var(--focus-tint); box-shadow: 0 0 0 4px var(--focus-ring-shadow); }
+.inovasi-drop:focus-within { border-color: var(--focus-ring); box-shadow: 0 0 0 4px var(--focus-ring-shadow); }
+.inovasi-drop.has-file { min-height: auto; margin-top: 0; padding: 11px; }
+.inovasi-upicon { color: var(--navy); }
+.inovasi-drop p { color: var(--text-secondary); font-size: 13px; }
+.inovasi-drop small { color: var(--muted); font-size: 11.5px; }
+.inovasi-file-chip { min-height: 54px; margin: 0; border-color: var(--success-line); border-radius: 12px; background: var(--success-bg); }
+.inovasi-fi { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.inovasi-fname { color: var(--text-secondary); font-size: 13px; }
+.upload-remove { border-radius: 9px; }
+.inovasi-footer-bar {
+  min-height: 78px;
+  padding: 18px 34px;
+  background: color-mix(in srgb, var(--bg-soft) 70%, var(--surface));
+  border-color: var(--border);
+}
+.inovasi-footer-bar > p { max-width: 42ch; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.inovasi-footer-bar .primary-form-link {
+  min-height: 46px;
+  gap: 8px;
+  padding-inline: 18px;
+  border-radius: 10px;
+  transition: background-color 180ms ease, transform 160ms ease, box-shadow 180ms ease;
+}
+.inovasi-footer-bar .primary-form-link:hover:not(:disabled) { box-shadow: 0 8px 18px color-mix(in srgb, var(--navy) 16%, transparent); transform: translateY(-1px); }
+.inovasi-footer-bar .primary-form-link svg { transition: transform 180ms ease; }
+.inovasi-footer-bar .primary-form-link:hover:not(:disabled) svg { transform: translateX(3px); }
+.inovasi-footer-bar .primary-form-link:disabled { cursor: wait; opacity: .62; }
+.inovasi-page .form-feedback { margin: 24px 34px 0; border-radius: 10px; line-height: 1.5; }
+.inovasi-completion { border-radius: 12px; }
+
+@keyframes inovasi-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes inovasi-section-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 900px) {
+  .inovasi-layout { grid-template-columns: 1fr; gap: 18px; margin-top: 22px; }
+  .inovasi-steps { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .inovasi-step { min-height: 54px; padding: 9px; gap: 9px; }
+  .inovasi-step-desc { display: none; }
+  .inovasi-progress-panel { grid-template-columns: 1fr; gap: 16px; }
+}
+
+@media (max-width: 760px) {
+  .inovasi-page .service-page-header { padding: 20px 20px 22px; }
+  .inovasi-layout { margin-bottom: 44px; padding-inline: 16px; }
+  .inovasi-page .inovasi-form-card.research-form-card, .inovasi-progress-panel, .inovasi-steps { border-radius: 14px; }
+  .inovasi-progress-panel { padding: 16px; }
+  .inovasi-progress-panel .form-completion { gap: 12px 8px; }
+  .inovasi-progress-panel .form-completion li { font-size: 11px; }
+  .inovasi-section { padding: 26px 20px; }
+  .inovasi-section-head { margin-bottom: 20px; }
+  .inovasi-section-head h3 { font-size: 16px; }
+  .inovasi-footer-bar { align-items: stretch; padding: 16px 20px; }
+  .inovasi-footer-bar > p { max-width: none; }
+  .inovasi-footer-bar .form-actions, .inovasi-footer-bar .primary-form-link { width: 100%; }
+  .inovasi-footer-bar .primary-form-link { min-height: 48px; }
+  .inovasi-page .form-feedback { margin: 20px 20px 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inovasi-progress-panel, .inovasi-section { animation: none; }
+  .inovasi-step, .inovasi-step-badge, .inovasi-field input, .inovasi-field select,
+  .inovasi-drop, .inovasi-footer-bar .primary-form-link,
+  .inovasi-footer-bar .primary-form-link svg { transition-duration: 1ms; }
+  .inovasi-footer-bar .primary-form-link:hover:not(:disabled),
+  .inovasi-footer-bar .primary-form-link:hover:not(:disabled) svg { transform: none; }
+}
+/* --- Redesign Input Inovasi: Soft & Friendly (9 Oktober 2026) --- */
+
+/* Panel lebih ramah: radius lembut, tanpa garis keras */
+.inovasi-page .inovasi-form-card.research-form-card { border-radius: 14px; }
+.inovasi-steps { border-radius: 14px; border-color: var(--border-soft); }
+
+/* Langkah sidebar aktif: tint amber lembut, bukan blok solid */
+.inovasi-step.active { background: var(--amber-tint-soft); }
+.inovasi-step.active .inovasi-step-badge {
+  border-color: var(--yellow); background: var(--yellow); color: var(--on-yellow);
+}
+.inovasi-step-badge { border: 1.5px solid var(--border-input); }
+
+/* Section lebih tenang: divider halus, heading lega */
+.inovasi-section { border-bottom-color: var(--border-soft); }
+.inovasi-section-head { gap: 10px; margin-bottom: 22px; }
+.inovasi-section-num {
+  width: 27px; height: 27px; border-radius: 50%;
+  border-color: var(--border-input); color: var(--navy);
+}
+
+/* Input dan upload lebih lembut */
+.inovasi-field input, .inovasi-field select { background: var(--surface); }
+.inovasi-drop { border-radius: 10px; }
+.inovasi-drop p { font-weight: 600; }
+
+/* Page entrance singkat, sekali, tanpa pergeseran layout besar */
+@media (prefers-reduced-motion: no-preference) {
+  .inovasi-layout:not(.is-complete) {
+    animation: inovasi-entrance 400ms ease-out both;
+  }
+}
+@keyframes inovasi-entrance {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Feedback status lebih ramah */
+.inovasi-page .form-feedback { border-radius: 10px; }
+
+/* ===== Redesign Wizard Input Inovasi (12S) =====
+   Struktur baru: satu tahap aktif per waktu, step indicator ringkas,
+   footer Kembali/Lanjutkan konsisten. Token tema existing; tanpa dekorasi. */
+
+.inovasi-wizard { max-width: 760px; margin: 26px auto 56px; padding: 0 20px; }
+.inovasi-wizard.research-form-card { width: min(760px, 100%); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.inovasi-wizard .wiz-panel { min-height: 380px; }
+
+.inovasi-wizard-page .service-page-header-inner { max-width: 760px; }
+.inovasi-wizard-page .service-page-heading > div > p { max-width: 60ch; }
+
+/* --- Indikator tahap --- */
+.wiz-steps-wrap { margin-bottom: 22px; }
+.wiz-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; padding: 0; list-style: none; }
+.wiz-step button {
+  width: 100%; min-height: 44px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 4px 2px 0; background: none; border: 0; border-radius: 8px;
+  font: inherit; cursor: pointer; position: relative;
+}
+.wiz-step button::before {
+  content: ''; position: absolute; top: 15px; left: -50%; width: 100%; height: 2px;
+  background: var(--border-strong);
+}
+.wiz-step:first-child button::before { display: none; }
+.wiz-step.is-done button::before { background: var(--success-line); }
+.wiz-step button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.wiz-step-dot {
+  position: relative; z-index: 1; width: 30px; height: 30px; display: grid; place-items: center;
+  border-radius: 50%; border: 1.5px solid var(--border-strong); background: var(--surface);
+  color: var(--text-faint); font-size: 12.5px; font-weight: 700;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
+}
+.wiz-step.is-active .wiz-step-dot { border-color: var(--navy-deep); background: var(--navy-deep); color: #fff; }
+[data-theme='dark'] .wiz-step.is-active .wiz-step-dot { border-color: var(--navy); background: var(--navy); color: var(--navy-deep); }
+.wiz-step.is-done:not(.is-active) .wiz-step-dot { border-color: var(--success); background: var(--success-bg); color: var(--success); }
+.wiz-step-label { font-size: 12px; font-weight: 600; color: var(--text-faint); line-height: 1.3; transition: color 200ms ease; }
+.wiz-step.is-active .wiz-step-label { color: var(--text-primary); }
+.wiz-step button:hover:not(.is-active) .wiz-step-label { color: var(--text-secondary); }
+
+/* --- Progres ringkas --- */
+.wiz-progress { height: 4px; border-radius: 999px; background: var(--border-soft); overflow: hidden; }
+.wiz-progress-fill {
+  display: block; height: 100%; border-radius: inherit; background: var(--accent-amber-deep);
+  transition: width 260ms ease;
+}
+.wiz-progress-note { margin: 10px 0 0; color: var(--text-faint); font-size: 12.5px; }
+
+/* --- Panel tahap --- */
+@keyframes wiz-panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.wiz-panel {
+  background: var(--surface); border: 1px solid var(--border-soft); border-radius: 12px;
+  padding: 32px 34px 26px; box-shadow: var(--shadow-sm);
+  animation: wiz-panel-in 240ms ease both;
+}
+.wiz-panel-head { margin-bottom: 26px; padding-bottom: 18px; border-bottom: 1px solid var(--border-soft); }
+.wiz-panel-head h2 { margin: 0; color: var(--form-heading); font-size: 19px; font-weight: 700; line-height: 1.3; }
+.wiz-panel-head h2:focus { outline: none; }
+.wiz-panel-head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; max-width: 52ch; }
+
+.wiz-file-label { display: inline-flex; align-items: center; gap: 7px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+
+/* --- Footer navigasi tahap --- */
+.wiz-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 26px 0 0; padding: 18px 0 0;
+  border-top: 1px solid var(--border-soft);
+}
+.wiz-footer .primary-form-button, .wiz-footer .secondary-form-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 44px; padding: 0 22px; border-radius: 8px; font-size: 13.5px; font-weight: 700;
+  cursor: pointer; transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
+}
+.wiz-footer .primary-form-button svg, .wiz-footer .secondary-form-button svg { transition: transform 200ms ease; }
+.wiz-footer .primary-form-button:hover:not(:disabled) svg { transform: translateX(2px); }
+.wiz-footer .secondary-form-button:hover:not(:disabled) svg { transform: translateX(-2px); }
+.wiz-footer .primary-form-button:focus-visible, .wiz-footer .secondary-form-button:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
+.wiz-footer .secondary-form-button { border: 1px solid var(--action-border); background: transparent; color: var(--text-secondary); }
+.wiz-footer .secondary-form-button:hover:not(:disabled) { background: var(--surface-hover); color: var(--text-primary); }
+.wiz-footer .secondary-form-button:disabled { cursor: wait; opacity: .6; }
+.wiz-footer-spacer { width: 1px; }
+.wiz-footer-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* --- Partitur BAB proposal di dalam tahap wizard --- */
+.wiz-chapters { display: flex; flex-direction: column; gap: 20px; }
+.wiz-chapter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* Field yang memuat area teks ikut ritme grid form bersama */
+.inovasi-field textarea {
+  width: 100%; min-height: 130px; padding: 12px 14px;
+  color: var(--text-secondary); background: var(--surface);
+  border: 1px solid var(--border-input); border-radius: 8px;
+  font: inherit; font-family: var(--font-display); font-size: 14px; line-height: 1.6;
+  resize: vertical; outline: none;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.inovasi-field textarea::placeholder { color: var(--text-faint); }
+.inovasi-field textarea:hover:not(:focus) { border-color: var(--input-border-strong); }
+.inovasi-field textarea:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 4px var(--focus-ring-shadow); }
+.inovasi-field textarea[aria-invalid='true'] {
+  border-color: var(--danger-line);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger-line) 24%, transparent);
+}
+
+@media (max-width: 760px) {
+  .inovasi-wizard { padding: 0 14px; margin-top: 20px; }
+  .wiz-step button::before { top: 13px; }
+  .wiz-step-dot { width: 26px; height: 26px; font-size: 11.5px; }
+  .wiz-step-label { font-size: 11px; }
+  .wiz-panel { padding: 24px 18px 20px; border-radius: 10px; }
+  .wiz-panel-head { margin-bottom: 20px; padding-bottom: 14px; }
+  .wiz-panel-head h2 { font-size: 17px; }
+  .wiz-footer { margin: 22px 0 0; padding: 14px 0 0; }
+  .wiz-footer .primary-form-button, .wiz-footer .secondary-form-button { min-height: 46px; padding: 0 16px; }
+  .wiz-footer-actions { width: 100%; }
+  .wiz-footer-actions .primary-form-button, .wiz-footer-actions .secondary-form-button { flex: 1 1 0; }
+  .wiz-step-label { display: none; }
+  .wiz-step.is-active .wiz-step-label { display: block; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiz-panel { animation: none; }
+  .wiz-progress-fill, .wiz-step-dot, .wiz-step-label,
+  .wiz-footer .primary-form-button, .wiz-footer .secondary-form-button,
+  .wiz-footer .primary-form-button svg, .wiz-footer .secondary-form-button svg,
+  .inovasi-field textarea { transition: none; }
+}
+
+/* Timeline section: tiga field tanggal memakai grid yang sama dengan
+   Informasi Utama dan Bentuk Inovasi (.inovasi-grid2) agar ritme label,
+   ikon, radius, dan tinggi kontrol identik. Input tanggal ikut padding
+   ikon 38px seperti field lain supaya teks tanggal tidak menumpuk ikon
+   CalendarDays; indikator kalender native hanya diberi margin. */
+.wiz-timeline .inovasi-field input[type="date"] {
+  padding-left: 38px;
+  padding-right: 14px;
+}
+.wiz-timeline .inovasi-field input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: 4px;
+  opacity: .62;
+  cursor: pointer;
+  transition: opacity 180ms ease;
+}
+.wiz-timeline .inovasi-field input[type="date"]:hover::-webkit-calendar-picker-indicator {
+  opacity: .95;
+}
+.wiz-timeline .inovasi-field input[type="date"]:focus::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiz-timeline .inovasi-field input[type="date"]::-webkit-calendar-picker-indicator { transition-duration: 1ms; }
+}
+

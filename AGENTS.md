@@ -659,6 +659,39 @@ design system Rumah BRIDA, aksesibilitas, dan pola codebase yang sudah ada.
 Perubahan backend murni yang tidak memengaruhi tampilan tidak wajib membaca
 skill tersebut.
 
+### Skill desain UI/UX Pro Max (Codebuff/Freebuff)
+
+Untuk pekerjaan desain di sesi Codebuff/Freebuff, skill intensi UI/UX
+`ui-ux-pro-max` (sumber https://github.com/nextlevelbuilder/ui-ux-pro-max-skill,
+MIT, v2.13.0) terpasang lokal di `.agents/skills/ui-ux-pro-max/`. Isinya
+`SKILL.md` dengan frontmatter yang dibaca Freebuff, data CSV (styles, colors,
+typography, products, ux-guidelines, reasoning, dsb.), `scripts/search.py`,
+`core.py`, `design_system.py` (Python 3 stdlib, tanpa dependency), serta
+`references/quick-reference.md` dan `references/pro-rules.md`.
+
+Jalankan mesin pencari dari project root:
+
+```bash
+python .agents/skills/ui-ux-pro-max/scripts/search.py "<query>" --design-system
+python .agents/skills/ui-ux-pro-max/scripts/search.py "<query>" --domain style
+python .agents/skills/ui-ux-pro-max/scripts/search.py "<query>" --stack react
+```
+
+Proyek ini dideteksi sebagai React 19 + Vite + CSS biasa, jadi pakai
+`--stack react` dan terjemahkan rekomendasi Tailwind ke token/CSS variables yang
+sudah ada. Aturan pemakaian pada proyek ini:
+
+- Output skill (pattern, style, palet tips, chart, checklist) hanya panduan;
+  identitas navy-putih-kuning, token light/dark, font self-host, ikon lucide,
+  reduced-motion, kontras >= 4.5, dan komponen pola yang ada tetap utama.
+  Jangan menambah dependency atau file font baru dari rekomendasi Google Fonts
+  tanpa keputusan pengguna (situs wajib jalan offline).
+- Jangan memodifikasi isi `.agents/skills/ui-ux-pro-max/` kecuali memperbarui
+  SKILL.md agar path script tetap akurat untuk Freebuff.
+- Checkout referensi lengkap repo upstream berada di `ui-ux-pro-max-skill/`
+  (untracked, bukan bagian aplikasi); skill yang dipakai agent adalah salinan
+  di `.agents/skills/`, bukan checkout itu.
+
 Semua gambar berada di `frontend/src/assets/image/`:
 
 - `Background.jpeg`: hero dan dekorasi beranda.
@@ -1784,6 +1817,269 @@ Verifikasi: ESLint lulus; 20 test frontend lulus; build Vite sukses (1927
 modul); PHPUnit lulus dengan 79 test dan 460 assertion, 2 test diskip; Pint
 lulus untuk `NewsController.php`. PHPUnit dijalankan langsung dengan ekstensi
 SQLite XAMPP karena runtime PHP default belum memuat `pdo_sqlite`.
+
+## 12P. Redesign Login Admin 9 Oktober 2026
+
+`/admin/login` didesain ulang dari kartu terpusat menjadi split layout dua panel
+menggunakan pertimbangan skill `ui-ux-pro-max` (pattern Enterprise Gateway,
+checklist aksesibilitas) dan `taste-skill` (trust-first public-sector, variance 3,
+motion 2, split-screen anti-center). Logika autentikasi, endpoint, pesan error,
+rate limiter, dan guard `App.jsx` tidak berubah; hanya struktur JSX dan CSS.
+
+- `LoginPage.jsx` kini memakai `.admin-login-layout` dua kolom: panel kiri
+  `.admin-login-aside` (navy editorial dengan `Background.jpeg` opacity 16%,
+  kicker Portal Resmi bergaris kuning, judul Selamat Datang/di Rumah BRIDA,
+  tagline akses administrator, dan catatan sistem sesi terenkripsi dengan ikon
+  Fingerprint) dan panel kanan `.admin-login-card` berisi form.
+- Form memakai `<label htmlFor>` terpisah di atas input tanpa placeholder
+  (bukan label membungkus input), `id` login-email/login-password,
+  `aria-invalid` plus `aria-describedby` ke elemen error, `autoFocus` email,
+  toggle tampil/sembunyi kata sandi tetap ada, dan tombol Masuk di atas fold.
+- CSS di `ServiceDesign.css` menggantikan `.admin-login-shell` dengan
+  `.admin-login-layout/.admin-login-aside/.admin-login-card`. Panel aside
+  SENGJAJA memakai warna navy literal `#071b35/#0b2347/#123156` dan amber
+  literal `#f0c05a`, bukan `var(--navy)`/`var(--accent-amber-ink)`, karena
+  token tersebut berperan terang di dark mode (presedan footer). Panel kanan
+  tetap token tema sehingga dark mode otomatis.
+- Mobile <=760px menjadi satu kolom: aside di atas, card di bawah. Judul aside
+  25px, heading card 23px.
+- Audit Chrome headless (Playwright, sementara, sudah dihapus): tanpa overflow
+  horizontal pada 1440/390 light+dark, judul panel tampil, label di atas input,
+  tanpa placeholder, autoFocus email, dan toggle kata sandi ada. Perbaikan
+  pasca-audit: aside awalnya memakai var(--navy) yang membuat panel terang di
+  dark dan teks putih tidak terbaca; diganti navy literal lalu diverifikasi ulang.
+- Verifikasi: ESLint bersih, build Vite sukses (1927 modul).
+- Penyempurnaan visual atas umpan balik pemilik bahwa panel form terasa
+datar: garis aksen kuning 3px di tepi atas kartu, mark shield dengan gradien
+amber dan inset highlight, input memperoleh state hover, tombol Masuk memakai
+gradien halus + shadow lembut + panah yang bergeser saat hover, serta baris
+`admin-login-modules` berisi empat chip modul (Berita, Riset, Inovasi, Lomba)
+dengan ikon lucide di bawah pemisah border. Chip memakai `border-soft`,
+`text-faint`, dan `accent-amber-ink` agar aman di dark mode. Audit ulang
+light/dark 1440px dan 390px: tanpa overflow, empat chip tampil di kedua tema.
+Laporan error lint sementara (`Fingerprint` undefined) muncul akibat penggantian
+baris import dan sudah diperbaiki; lint akhir exit 0.
+
+
+## 12Q. Perapian Form Riset dan Inovasi 9 Oktober 2026
+
+Perapian visual halaman Proposal Riset (`/riset/proposal`) dan Input Inovasi
+(`/inovasi/input`) diterapkan sebagai blok CSS terpisah di akhir `App.css`
+(pola sama dengan 12C), dengan mempertahankan identitas navy-putih-kuning,
+token light/dark, struktur form, alur draft/kirim, dan aksesibilitas. Tidak
+ada perubahan JSX struktural, endpoint, atau migration.
+
+- Radius kontrol input/select/textarea kedua form disamakan ke 8px
+  (sebelumnya riset 10px dan inovasi 6px sehingga tidak serasi), ditambah
+  state hover border halus (`--input-border-strong`) saat tidak fokus.
+- Nomor bagian (`riset-section-num`/`inovasi-section-num`) berubah dari kotak
+  berlatar `--bg-soft` menjadi outline 1.5px `--border-strong` dengan angka
+  lebih kecil agar lebih tenang.
+- Section lebih lega (padding 30px 34px, mobile 24px 20px) dan card form
+  memakai `--shadow-sm` yang lebih lembut.
+- Upload drop zone lebih tenang: latar transparan, border dashed
+  `--border-strong`, ikon 22px; hover/drag kuning (`--amber-tint-soft`)
+  dipertahankan sebagai sinyal interaksi.
+- File chip lebih ringan (border `--border-input`, radius 8px) dan timeline
+  inovasi lebih redup (`--border-input` saat kosong, kuning saat terisi).
+- Sidebar langkah inovasi memakai `--shadow-sm` dan border `--border-input`.
+- Lint lama `progressPercent` tak terpakai di `InovasiInputPage.jsx`
+  dihapus; `npm run lint` bersih dan build Vite sukses (1927 modul).
+
+## 12R. Redesign Soft & Friendly Input Inovasi dan Proposal Riset 9 Oktober 2026
+
+Redesign kedua form layanan (Proposal Riset `/riset/proposal` dan Input
+Inovasi `/inovasi/input`) dengan arah Soft & Friendly / trust-first
+minimalism (variance 3, motion 5, density 3) berdasarkan skill
+`ui-ux-pro-max`. Identitas navy-putih-kuning, token light/dark, struktur
+form, alur draft/kirim, validasi, upload PDF, dan aksesibilitas
+dipertahankan. Tidak ada perubahan JSX struktural, endpoint, atau migration.
+Form tetap satu halaman dengan progressive disclosure, bukan wizard,
+karena sidebar langkah sticky inovasi dan FormProgress riset sudah
+menyediakan navigasi antar-bagian tanpa risiko kehilangan state.
+
+- CSS perapian ditulis sebagai blok terpisah di akhir `App.css`
+  (`Redesign Input Inovasi` + `Perapian form riset`), pola sama dengan 12C.
+  Blok 12Q yang lama dihapus karena digantikan blok ini; aturan bersama
+  lainnya tidak disentuh.
+- Halaman memakai entrance halus (`form-page-enter`, fade-up 12px, 480ms)
+  sekali saat dimuat; `prefers-reduced-motion: reduce` mematikannya.
+- Section form lebih tenang: header kini rata kiri (bukan rata tengah),
+  nomor bagian outline `--border-strong`, judul 17px, dan divider memakai
+  `--border-soft`. Padding section 30px 34px (mobile 24px 20px).
+- Kontrol input/select/textarea kedua form seragam radius 8px dengan hover
+  border `--input-border-strong` dan focus ring token yang sudah ada.
+- Sidebar langkah inovasi lebih ringan: `--shadow-sm`, border
+  `--border-input`, hover `--surface-hover`; badge aktif tetap kuning,
+  done tetap hijau.
+- Timeline inovasi lebih redup (`--border-input` kosong, kuning saat
+  terisi) dan file chip memakai radius 8px dengan border `--border-input`.
+- Drop zone upload: latar transparan, border dashed `--border-strong`,
+  hover/drag kuning `--amber-tint-soft` dipertahankan sebagai sinyal
+  interaksi.
+- Footer bar form memakai `--bg-soft` dengan border-top halus; tombol
+  primer/sekunder mengikuti token `--btn-primary-*` sehingga aman di
+  dark mode.
+- Struktur file App.css sempat rusak akibat sisipan berbasis nomor baris
+  (rule `.site-shell` kehilangan penutup dan komentar 12Q terstranding);
+  telah dinormalisasi ulang — jumlah braces seimbang 977/977 dan parser
+  CSS bersih.
+
+Verifikasi: `npm run lint` bersih dan build Vite sukses (1927 modul).
+Audit Chrome headless (sementara, skrip sudah dihapus) pada `/riset/proposal`
+dan `/inovasi/input` viewport 1440px dan 390px dalam light/dark: entrance
+tampil, section header rata kiri, sidebar langkah sticky, timeline, upload,
+tombol, tanpa overflow horizontal, dan reduced-motion mematikan entrance.
+Tidak ada pengiriman data uji ke database pengguna.
+
+## 12S. Wizard Input Inovasi 9 Oktober 2026
+
+Perombakan struktural halaman Input/Edit Inovasi berdasarkan umpan balik bahwa
+redesign 12R masih terlalu ramai: halaman kini menjadi **wizard empat tahap**
+(Informasi Utama, Bentuk Inovasi, Timeline, Berkas Pendukung) — hanya satu
+tahap tampil pada satu waktu. Arah desain premium-minimal mengikuti
+`ui-ux-pro-max` (pola fokus tunggal, aksesibilitas ketat) yang diterjemahkan
+ke token navy-putih-emas existing; tanpa dependency atau aset baru.
+
+- `InovasiInputPage.jsx` ditulis ulang: sidebar langkah sticky, panel
+  `FormProgress`, IntersectionObserver, dan footer bar lama dihapus. Diganti
+  navigasi tahap `.wiz-steps` (status aktif navy solid, selesai checkmark hijau,
+  `aria-current="step"`, klik bebas untuk kembali ke tahap sebelumnya),
+  progress bar ringkas dengan catatan "Tahap X dari 4 — N dari 5 data wajib
+  terisi", dan footer `.wiz-footer` konsisten: `Kembali` (kiri) + `Lanjutkan`
+  atau `Tinjau Inovasi` pada tahap akhir (kanan).
+- Seluruh logika dipertahankan: state `form` tunggal (data tidak hilang saat
+  pindah tahap), `updateField`, `validateFieldOnBlur`, opsi lainnya
+  (ketik nilai custom), `PdfUploadField`, `SubmissionReview`, edit mode
+  `_method=PUT`, payload, endpoint, dan layar selesai.
+- Validasi per-tahap: `Lanjutkan` memvalidasi hanya field tahap aktif dan
+  memblokir dengan fokus ke field bermasalah; `requestReview` tetap memvalidasi
+  seluruh form lalu melompat (`jumpToErrorStep`) ke tahap pertama yang berisi
+  kesalahan, kemudian memfokus field-nya. Fokus pindah ke heading tahap
+  (`tabIndex=-1`) setiap pergantian tahap untuk screen reader.
+- CSS blok baru `Wizard Input Inovasi (12S)` di akhir `App.css` (scoped
+  `.inovasi-wizard-page`/`.inovasi-wizard`): panel 760px, langkah 30px dengan
+  konektor, entrance `wiz-panel-in` 240ms, transisi 200-260ms, token light/dark;
+  di mobile <=760px label tahap nonaktif disembunyikan dan yang aktif tetap
+  tampak. Entrance, hover, dan gulir tahap menghormati
+  `prefers-reduced-motion`.
+- Komponen `FormProgress` tidak lagi dipakai halaman ini (tetap tersedia untuk
+  halaman lain; dibersihkan bila Proposal Riset juga di-wizard-kan).
+- Test `tests/inovasi-wizard.test.mjs` (7 test) menjaga struktur wizard,
+  larangan komponen lama, validasi/kembali, reduced-motion, dan payload/review,
+  termasuk keseragaman grid tahap Timeline (lihat subbagian di bawah).
+  Regression test login di `auth-navigation.test.mjs` disesuaikan dengan copy
+  redesign 12P (`Masuk ke akun`; asersi teks panel lama dibuang).
+
+Verifikasi: ESLint bersih, build Vite sukses (1927 modul), 27 unit/regression
+test frontend lulus, brace CSS seimbang. Audit Chrome headless via CDP dengan
+fixture API (skrip sementara, sudah dihapus): 13/13 lulus pada 1440px light/dark
+dan 390px — satu tahap aktif, validasi per-tahap, fokus error, data terjaga
+saat kembali, dialog review terbuka, dark mode, dan tanpa overflow horizontal.
+Tidak ada penulisan ke database pengguna (POST di-mock). Wizard perlu dicek
+sekali di browser interaktif dengan backend nyata sebelum merge.
+
+
+### Penyesuaian tahap Timeline dengan grid form bersama 9 Oktober 2026
+
+Tahap Timeline (tahap indeks 2) sebelumnya memakai kontainer sendiri
+`.inovio-timeline-fields` dengan grid tiga kolom rapat (`gap: 20px`), sehingga
+lebar field, jarak antar-field, dan ritme labelnya berbeda dari Informasi Utama
+dan Bentuk Inovasi yang memakai `.inovasi-grid2`.
+
+- Markup Timeline kini memakai kontainer bersama `.inovasi-grid2 wiz-timeline`.
+  Kelas dasar `.inovasi-grid2` (dua kolom, `gap: 22px 20px`) membuat lebar field,
+  gap, tinggi kontrol, radius, tipografi label, ikon `CalendarDays`, serta state
+  hover/focus/invalid identik dengan tahap lain. Field ketiga otomatis mengalir
+  ke baris kedua sehingga tinggi panel tetap seimbang.
+- Aturan lama `.inovio-timeline-fields` dihapus dari `App.css` dan digantikan
+  blok scoped `.wiz-timeline`. Padding tanggal dikembalikan simetris dengan field
+  lain: `padding-left: 38px` (sebelumnya 12px sehingga teks tanggal berpotensi
+  menumpuk ikon kalender dekoratif di `left: 13px`) dan `padding-right: 14px`.
+- Indikator kalender native `::-webkit-calendar-picker-indicator` diberi
+  `margin-left: 4px`, opasitas tenang yang naik saat hover/focus, dan transition
+  yang dipendekkan pada `prefers-reduced-motion: reduce`.
+- Perilaku fungsional tidak berubah: tiga field tetap opsional (`trial_date`,
+  `implementation_date`, `ratification_date`), memakai `updateField`, tanpa
+  `aria-required`, dan tetap mengikuti `validateFieldOnBlur` yang sama.
+- Test `tests/inovasi-wizard.test.mjs` diperbarui dan ditambah test
+  "Timeline memakai grid dan gaya field yang sama dengan Informasi Utama" yang
+  menjaga jumlah kontainer `.inovasi-grid2`, ketiadaan `inovio-timeline-fields`
+  di JSX maupun CSS, dan padding tanggal 38px.
+
+Verifikasi: 7 unit test wizard lulus, ESLint bersih, build Vite sukses (1927
+modul). Audit Chrome headless dengan fixture API dan sesi admin di
+`sessionStorage` (skrip sementara, sudah dihapus) pada `/inovasi/input`: tahap
+Timeline memakai `grid-template-columns` dan `gap: 22px 20px` yang sama dengan
+Informasi Utama, tinggi input 46px, radius 8px, padding kiri 38px, ikon di 13px,
+tanpa overflow horizontal, dan token light/dark terbaca. Tidak ada pengiriman
+data uji ke database pengguna.
+
+## 12T. Wizard Proposal Riset 9 Oktober 2026
+
+Halaman Proposal Riset (`/riset/proposal` dan `/riset/proposal/{id}/edit`)
+diubah dari satu form panjang bernavigasi section menjadi wizard empat tahap
+agar identik dengan Input Inovasi (12S): Informasi Peneliti, Institusi &
+Lokasi, Isi Proposal, dan Berkas Proposal. Tujuannya keseragaman desain dan
+perilaku antar kedua form layanan; tidak ada endpoint, payload, migration,
+atau aturan validasi backend yang berubah.
+
+- `ResearchProposalPage.jsx` tetap memakai satu state `form` sehingga data tidak
+  hilang saat berpindah tahap. Sidebar langkah lama, panel `FormProgress`, dan
+  `IntersectionObserver` tidak lagi dipakai di halaman ini.
+- Navigasi tahap memakai chrome wizard bersama milik 12S: `.wiz-steps` /
+  `.wiz-step` / `.wiz-step-dot` / `.wiz-step-label`, progress bar
+  `.wiz-progress` + `.wiz-progress-fill`, catatan kelengkapan
+  "Tahap X dari 4 - N dari 8 data wajib terisi", dan `.wiz-footer`. Struktur,
+  kelas, serta animasi `wiz-panel-in` DIBAGI dengan Input Inovasi, bukan
+  disalin; perubahan chrome wizard harus diuji pada kedua halaman.
+- Tahap aktif memakai `aria-current="step"`, heading tahap diberi `tabIndex=-1`
+  dan difokuskan setiap pergantian tahap untuk pembaca layar, serta panel
+  memakai `aria-labelledby` ke heading tersebut.
+- Validasi mengikuti pola 12S: `advanceStep()` hanya memvalidasi field tahap
+  aktif dan memblokir dengan `focusFirstError`, sedangkan `requestReview()`
+  memvalidasi seluruh form lalu melompat ke tahap pertama yang bermasalah.
+- Tujuh field wajib dipakai bersama dari `researchRequiredFields`; PDF tetap
+  kondisional (`Boolean(existingPdfName)`), sehingga edit proposal yang sudah
+  punya berkas tidak wajib mengunggah ulang.
+- Tiga BAB proposal dirender sebagai daftar `.wiz-chapters`; setiap item memakai
+  `.wiz-chapter-head` (label + `FieldRequirement` + `.riset-word-badge`
+  "N/300 kata") dan `<textarea>` ber-`aria-required` yang memakai ritme field
+  grid bersama. Batas 300 kata per BAB dan maksimum 5 MB tetap sama.
+- Tahap Berkas memakai `.wiz-file` + `.wiz-file-label` ("Berkas proposal (PDF)")
+  di atas `PdfUploadField`, karena komponen upload tidak mencetak label sendiri.
+- Footer memuat `Kembali` (kiri) dan, pada semua tahap, `Simpan Draft`; tombol
+  kanan berubah menjadi `Tinjau Proposal` pada tahap terakhir. Tombol
+  `Simpan Draft` tetap mengirim `action=draft` lewat `submitProposal('draft')`
+  dan tidak mengubah status menjadi `submitted`.
+- Payload, guard klik ganda (`savingRef`), `_method=PUT` saat edit, alur
+  ringkasan `SubmissionReview title="Ringkasan Proposal"`, layar selesai, serta
+  perilaku `can_manage` dan policy pemilik lama tidak diubah.
+- CSS wizard dipakai bersama di `App.css`; yang ditambahkan khusus adalah
+  `.wiz-chapters`, `.wiz-chapter-head`, dan aturan `.inovasi-field textarea`
+  (radius 8px, hover `--input-border-strong`, focus ring token, invalid
+  `--danger-line`, reduced-motion). Pada <=760px label tahap nonaktif
+  disembunyikan, panel memakai padding 24px 18px 20px, dan tombol
+  `.wiz-footer-actions` melebar `flex: 1 1 0`.
+- Regression test baru `tests/riset-wizard.test.mjs` (9 test) menjaga empat
+  tahap, ketiadaan komponen lama, dua kontainer `.inovasi-grid2`, kelas chevron
+  `inovasi-chevron`, partitur `.wiz-chapters`, label berkas, alur
+  `advanceStep`/`requestReview`, payload draft, dan reduced-motion.
+
+Verifikasi: ESLint bersih; build Vite sukses (1926 modul); seluruh 36 unit/
+regression test frontend lulus. Audit Chrome headless dengan fixture API dan
+sesi admin di `sessionStorage` (skrip sementara, sudah dihapus) pada
+`/riset/proposal` memastikan: hanya satu tahap tampil, `wiz-steps` berisi empat
+label benar, validasi per-tahap menampilkan `.field-error` dan `aria-invalid`,
+data terjaga saat kembali ke tahap sebelumnya, tahap Isi Proposal menampilkan
+tiga textarea dan tiga badge kata, tahap Berkas menampilkan label PDF serta
+tombol [Kembali, Simpan Draft, Tinjau Proposal], dan paritas gaya terukur
+dengan `/inovasi/input` (`gap: 22px 20px`, tinggi kontrol 46px, radius 8px,
+padding panel `32px 34px 26px`). Dark mode terbaca (kontras 6.5-13.6:1),
+mobile 390px tanpa overflow horizontal (panel padding 24px 18px 20px, hanya
+label tahap aktif yang tampil), dan `prefers-reduced-motion` mematikan animasi
+panel. Tidak ada penulisan ke database pengguna (POST di-mock). Wizard perlu
+dicek sekali di browser interaktif dengan backend nyata sebelum merge.
 
 ## 13. Alur Kerja Git
 

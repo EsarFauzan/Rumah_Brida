@@ -178,24 +178,47 @@ html { scroll-behavior: smooth; }
 
 /* Admin authentication and workspace */
 .route-guard-state { min-height: 55vh; display: grid; place-items: center; color: var(--muted); background: var(--bg-soft); font-size: 13px; }
-.admin-login-page { min-height: calc(100dvh - var(--header-height)); display: grid; place-items: center; padding: 64px 24px 80px; background: var(--bg-soft); }
-.admin-login-shell { width: min(430px, 100%); padding: 38px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 20px 50px rgba(16,42,78,.09); }
-[data-theme='dark'] .admin-login-shell { box-shadow: 0 20px 50px rgba(0,0,0,.28); }
-.admin-login-mark { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 26px; color: var(--navy); background: color-mix(in srgb, var(--accent-amber) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent-amber) 32%, var(--border)); border-radius: 8px; }
-.admin-login-heading > span, .admin-dashboard-heading > span { color: var(--accent-amber-ink); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.admin-login-heading h1 { margin: 8px 0 8px; color: var(--navy-deep); font-size: 28px; line-height: 1.25; }
-.admin-login-heading p { margin: 0 0 28px; color: var(--muted); font-size: 13px; }
-.admin-login-shell > .form-feedback { margin: 0 0 18px; }
-.admin-login-form { display: flex; flex-direction: column; gap: 18px; }
-.admin-login-form .auth-field input { width: 100%; height: 46px; padding: 0 44px 0 42px; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border-input); border-radius: 6px; font: inherit; font-family: var(--font-display); font-size: 13px; outline: 0; }
+.admin-login-page { min-height: calc(100dvh - var(--header-height)); display: grid; place-items: center; padding: 48px 24px 64px; background: var(--bg-soft); }
+.admin-login-layout { width: min(100%, 980px); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr); overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 24px 60px rgba(16,42,78,.1); }
+[data-theme='dark'] .admin-login-layout { box-shadow: 0 24px 60px rgba(0,0,0,.32); }
+.admin-login-aside { position: relative; display: flex; flex-direction: column; justify-content: space-between; gap: 40px; padding: 44px 40px; color: #fff; background: linear-gradient(135deg, #071b35 0%, #0b2347 62%, #123156 100%); overflow: hidden; isolation: isolate; }
+.admin-login-aside::before { content: ''; position: absolute; z-index: -1; inset: 0; background: url('./assets/image/Background.jpeg') 50% 46% / cover no-repeat; opacity: .16; }
+.admin-login-aside::after { content: ''; position: absolute; z-index: -1; top: -60px; right: -70px; width: 240px; height: 240px; border: 1px solid color-mix(in srgb, #fff 16%, transparent); border-radius: 50%; pointer-events: none; }
+.admin-login-aside-brand { position: relative; max-width: 380px; }
+.admin-login-kicker { display: inline-flex; align-items: center; gap: 9px; color: #f0c05a; font-size: 10px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.admin-login-kicker::before { content: ''; width: 26px; height: 2px; background: var(--yellow); border-radius: 2px; }
+.admin-login-aside-title { margin: 14px 0 0; color: #fff; font-size: 30px; line-height: 1.12; letter-spacing: -.01em; }
+.admin-login-aside-title span { color: color-mix(in srgb, #fff 72%, transparent); }
+.admin-login-tagline { margin: 14px 0 0; color: color-mix(in srgb, #fff 78%, transparent); font-size: 13.5px; line-height: 1.75; }
+.admin-login-aside-system { position: relative; display: flex; align-items: flex-start; gap: 10px; padding-top: 16px; color: color-mix(in srgb, #fff 72%, transparent); border-top: 1px solid color-mix(in srgb, #fff 14%, transparent); font-size: 11.5px; line-height: 1.6; }
+.admin-login-system-icon { flex-shrink: 0; margin-top: 1px; color: #f0c05a; }
+.admin-login-brand { margin-bottom: 22px; }
+.admin-login-brand-logo { display: block; height: 44px; width: auto; }
+.admin-login-brand-logo.dark { display: none; }
+[data-theme='dark'] .admin-login-brand-logo { display: none; }
+[data-theme='dark'] .admin-login-brand-logo.dark { display: block; }
+.admin-login-card { position: relative; display: flex; flex-direction: column; justify-content: center; padding: 44px 46px; }
+.admin-login-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--yellow), color-mix(in srgb, var(--yellow) 55%, transparent)); }
+.admin-login-heading h2 { margin: 0 0 7px; color: var(--navy-deep); font-size: 26px; line-height: 1.25; }
+.admin-login-heading p { margin: 0 0 24px; color: var(--muted); font-size: 13px; }
+.admin-login-shell > .form-feedback, .admin-login-card > .form-feedback { margin: 0 0 18px; }
+.admin-login-form { display: flex; flex-direction: column; gap: 16px; }
+.admin-login-form .auth-field label { display: block; margin-bottom: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+.admin-login-form .auth-field input { width: 100%; height: 46px; padding: 0 44px 0 42px; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border-input); border-radius: 8px; font: inherit; font-family: var(--font-display); font-size: 14px; outline: 0; }
+.admin-login-form .auth-field input:hover:not(:focus) { border-color: var(--border-strong); }
 .admin-login-form .auth-field input:focus { border-color: var(--focus-ring); box-shadow: 0 0 0 3px var(--focus-ring-shadow); }
-.admin-login-submit { min-height: 46px; margin-top: 4px; color: var(--btn-primary-text); background: var(--btn-primary-bg); border: 1px solid var(--btn-primary-line); border-radius: 6px; font-size: 13px; font-weight: 750; cursor: pointer; transition: background-color 180ms ease; }
-.admin-login-submit:hover { background: var(--btn-primary-hover); }
+.admin-login-submit { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 46px; margin-top: 4px; color: var(--btn-primary-text); background: linear-gradient(180deg, color-mix(in srgb, var(--btn-primary-bg) 92%, #fff), var(--btn-primary-bg)); border: 1px solid var(--btn-primary-line); border-radius: 8px; font-size: 13.5px; font-weight: 750; cursor: pointer; transition: background-color 180ms ease, transform 120ms ease, box-shadow 180ms ease; box-shadow: 0 10px 22px color-mix(in srgb, var(--navy) 22%, transparent); }
+.admin-login-submit:hover { background: var(--btn-primary-hover); box-shadow: 0 12px 26px color-mix(in srgb, var(--navy) 28%, transparent); }
+.admin-login-submit:hover .admin-login-submit-arrow { transform: translateX(3px); }
+.admin-login-submit-arrow { transition: transform 180ms ease; }
+.admin-login-submit:active { transform: scale(.985); }
 .admin-login-submit:focus-visible { outline: 2px solid var(--yellow); outline-offset: 3px; }
 .admin-login-submit:disabled { cursor: wait; opacity: .62; }
-.admin-login-back { display: block; width: fit-content; margin: 24px auto 0; color: var(--muted); font-size: 12px; text-decoration: none; }
+.admin-login-back { display: inline-flex; align-items: center; gap: 6px; width: fit-content; margin: 20px auto 0; color: var(--muted); font-size: 12.5px; text-decoration: none; }
 .admin-login-back:hover { color: var(--navy); text-decoration: underline; text-underline-offset: 4px; }
 .admin-login-back:focus-visible { outline: 2px solid var(--yellow); outline-offset: 4px; }
+[data-theme='dark'] .admin-login-heading h2 { color: var(--form-heading); }
+[data-theme='dark'] .admin-login-back:hover { color: var(--accent-amber-ink); }
 
 .admin-dashboard-page { min-height: 72vh; padding: 64px 0 88px; background: var(--bg-soft); }
 .admin-dashboard-shell { width: min(1100px, calc(100% - 48px)); }
@@ -267,8 +290,11 @@ html { scroll-behavior: smooth; }
   .footer-bottom-inner { align-items: center; flex-direction: column; gap: 8px; }
   .footer-bottom-inner a::before { display: none; }
   .admin-login-page { padding: 36px 16px 56px; }
-  .admin-login-shell { padding: 28px 22px; }
-  .admin-login-heading h1 { font-size: 24px; }
+  .admin-login-layout { grid-template-columns: 1fr; }
+  .admin-login-aside { gap: 30px; padding: 32px 26px; }
+  .admin-login-aside-title { font-size: 25px; }
+  .admin-login-card { padding: 30px 24px 34px; }
+  .admin-login-heading h2 { font-size: 23px; }
   .admin-dashboard-page { padding: 44px 0 64px; }
   .admin-dashboard-shell { width: min(100% - 32px, 1100px); }
   .admin-dashboard-heading h1 { font-size: 28px; }

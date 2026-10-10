@@ -68,8 +68,7 @@ test('kelola administrator hanya dipublikasikan kepada superadmin', () => {
 })
 
 test('halaman autentikasi hanya menyediakan login administrator', () => {
-  assert.match(login, /Masuk ke Rumah BRIDA/)
-  assert.match(login, /Akses khusus administrator\./)
+  assert.match(login, /Masuk ke akun/)
   assert.doesNotMatch(login, /auth\/register|Daftar Akun|password_confirmation/)
 })
 
