@@ -1997,6 +1997,11 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .inovasi-wizard-page .service-page-header-inner { max-width: 760px; }
 .inovasi-wizard-page .service-page-heading > div > p { max-width: 60ch; }
 
+/* Wizard Riset memakai `ServicePageHeader` yang menempel di bawah navbar, jadi
+  padding wrapper dari layout form lama harus dihapus. Tanpa ini ada celah
+  kosong 72px di atas judul halaman. Pola sama dengan `.inovasi-page.research-page`. */
+.research-page.inovasi-wizard-page { padding: 0; }
+
 /* --- Indikator tahap --- */
 .wiz-steps-wrap { margin-bottom: 22px; }
 .wiz-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin: 0 0 14px; padding: 0; list-style: none; }

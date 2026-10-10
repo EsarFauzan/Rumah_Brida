@@ -2071,6 +2071,18 @@ atau aturan validasi backend yang berubah.
   tahap, ketiadaan komponen lama, dua kontainer `.inovasi-grid2`, kelas chevron
   `inovasi-chevron`, partitur `.wiz-chapters`, label berkas, alur
   `advanceStep`/`requestReview`, payload draft, dan reduced-motion.
+- Wrapper halaman wizard Riset hanya memakai `research-page`, sehingga padding
+  lama `padding: 72px 20px 92px` dari layout form satu halaman masih berlaku
+  dan menyisipkan celah kosong 72px di bawah navbar sebelum judul halaman.
+  Aturan `.research-page.inovasi-wizard-page { padding: 0 }` mengembalikannya
+  ke 0 pada desktop maupun <=760px karena specificity (0,2,0) mengalahkan
+  padding bawaan `.research-page` dan media query-nya. Jangan menambahkan
+  kelas `inovasi-page` ke `ResearchProposalPage.jsx` hanya untuk mewarisi
+  `.inovasi-page.research-page { padding: 0 }`: aturan `.inovasi-page
+  .service-page-header` dan lebar inner 1160px sengaja hanya untuk Inovasi.
+  Keadaan loading kedua halaman tetap memakai `<section className="research-page">`
+  polos, sehingga pemuatan awal masih memakai padding lama sampai wizard selesai
+  dimuat.
 
 Verifikasi: ESLint bersih; build Vite sukses (1926 modul); seluruh 36 unit/
 regression test frontend lulus. Audit Chrome headless dengan fixture API dan
