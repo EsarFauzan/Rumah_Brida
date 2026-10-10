@@ -1674,7 +1674,7 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .site-shell .public-info-file-column { width: 208px; }
 .site-shell :is(.riset-field, .inovasi-field) { font-size: 14px; }
 .site-shell :is(.riset-field, .inovasi-field) :is(input, select),
-.site-shell .riset-chapter textarea {
+.site-shell .wiz-chapters textarea {
   border-radius: var(--control-radius);
   font-size: 15px;
 }
@@ -1715,7 +1715,7 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
   .site-shell :is(.public-info-search, .if-search, .research-results-search) input,
   .site-shell :is(.public-info-year, .if-year-select select),
   .site-shell :is(.riset-field, .inovasi-field) :is(input, select),
-  .site-shell .riset-chapter textarea { font-size: 16px; }
+  .site-shell .wiz-chapters textarea { font-size: 16px; }
   .site-shell :is(.public-info-search, .if-search, .research-results-search) button { min-width: 44px; min-height: 44px; }
   .site-shell .if-year-select { width: 100%; }
   .site-shell :is(.public-info-file, .if-file-link, .research-table-file) { min-height: 44px; font-size: 13px; }
