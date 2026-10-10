@@ -2105,7 +2105,7 @@ Dua perbaikan pada halaman wizard Inovasi (`/inovasi/input`) dan Riset
 (`/riset/proposal`). Tidak ada perubahan endpoint, payload, migration, atau
 aturan validasi backend.
 
-- Kytek bukan bug: bar progres kuning hanya menghitung kolom WAJIB.
+- Ini bukan bug: bar progres kuning hanya menghitung kolom WAJIB.
   `innovationRequiredFields` berisi lima kolom, sedangkan tiga tanggal pada
   tahap Timeline (`trial_date`, `implementation_date`, `ratification_date`)
   semuanya opsional. Jadi 100% pada tahap Timeline memang sahih meski belum
@@ -2146,6 +2146,23 @@ hilang saat pindah ke tahap tanpa field wajib. Dark mode 390px kontras teks
 sebagai warna solid sehingga melaporkan 2.20:1. ESLint bersih, build Vite sukses,
 seluruh 36 unit/regression test frontend lulus. Tidak ada penulisan ke database
 pengguna (POST di-mock).
+
+Verifikasi tambahan live (10 Oktober 2026): kedua wizard diuji ulang di Chrome
+headless lewat CDP terhadap backend Laravel nyata, tanpa mock API dan tanpa
+POST/PUT/DELETE, sehingga tidak ada data pengguna yang tersentuh. Sesi
+admin disuntikkan ke sessionStorage hanya agar guard App.jsx mengizinkan
+rute wizard; token yang dipakai bukan token Sanctum asli. Hasil 36 dari 36
+asersi lulus pada /inovasi/input dan /riset/proposal: satu elemen
+.wiz-feedback dengan pesan yang benar, left dan lebar identik dengan
+.wiz-panel (720px desktop, 362px mobile 390px), margin-left: 0px,
+dua .field-error muncul, peringatan tidak menutupi bar progres maupun panel
+(tidak ada tumpang tindih), teks peringatan tidak terpotong, isian form tetap
+bertahan setelah berpindah tahap, pesan hilang saat pindah tahap, satu tahap
+aktif saja, dan tidak ada overflow horizontal di 1021px maupun 390px. Dark mode
+terukur >= 5.90:1. Bukti geometri ini adalah pengukuran DOM, bukan
+tinjauan mata pada screenshot; alat `view_image` tidak tersedia di
+lingkungan ini sehingga screenshot hanya dipakai sebagai artefak.
+
 ## 13. Alur Kerja Git
 
 Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
