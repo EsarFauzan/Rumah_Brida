@@ -2061,6 +2061,12 @@ atau aturan validasi backend yang berubah.
   `--danger-line`, reduced-motion). Pada <=760px label tahap nonaktif
   disembunyikan, panel memakai padding 24px 18px 20px, dan tombol
   `.wiz-footer-actions` melebar `flex: 1 1 0`.
+- Aturan ukuran font kontrol bersama (15px desktop, 16px pada <=760px) memakai
+  `.wiz-chapters textarea`, bukan `.riset-chapter textarea`. Kelas
+  `.riset-chapter` sudah tidak dipakai markup mana pun sejak 12T karena tiga
+  BAB dirender di dalam `.wiz-chapters`; selector lama membuat textarea BAB
+  Riset jatuh ke `font-size: 14px` dari `.inovasi-field textarea` sehingga
+  tidak serasi dengan input dan select pada tahap lain.
 - Regression test baru `tests/riset-wizard.test.mjs` (9 test) menjaga empat
   tahap, ketiadaan komponen lama, dua kontainer `.inovasi-grid2`, kelas chevron
   `inovasi-chevron`, partitur `.wiz-chapters`, label berkas, alur
