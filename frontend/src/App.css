@@ -1994,13 +1994,37 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 .inovasi-wizard.research-form-card { width: min(760px, 100%); border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .inovasi-wizard .wiz-panel { min-height: 380px; }
 
-.inovasi-wizard-page .service-page-header-inner { max-width: 760px; }
 .inovasi-wizard-page .service-page-heading > div > p { max-width: 60ch; }
 
 /* Wizard Riset memakai `ServicePageHeader` yang menempel di bawah navbar, jadi
   padding wrapper dari layout form lama harus dihapus. Tanpa ini ada celah
   kosong 72px di atas judul halaman. Pola sama dengan `.inovasi-page.research-page`. */
 .research-page.inovasi-wizard-page { padding: 0; }
+
+/* Proporsi header halaman wizard (12V). Header lama memakai padding vertikal
+  26/28px dan crumb margin 14px yang dirancang untuk halaman daftar lebar
+  (1100-1160px). Kolom wizard hanya 760px (Riset `narrow` 820px), sehingga
+  header terasa lapang: 181px di 1440px padahal isinya 126px. Padding dan
+  margin dikecilkan supaya tinggi header mengikuti isinya, bukan dipaksa lewat
+  `min-height`/`height` yang hanya menambah ruang kosong. Lebar header disamakan
+  dengan lebar kolom wizard (760px) dikurangi padding horizontal header (2x20px),
+  supaya judul, breadcrumb, dan panel wizard mulai pada satu garis yang sama
+  (0px offset; sebelumnya -20px pada Inovasi dan -50px pada Riset karena
+  `.is-narrow` di ServiceDesign.css memakai 820px). */
+.inovasi-wizard-page .service-page-header {
+  padding: 18px 20px 20px;
+}
+.inovasi-wizard-page .service-page-header .service-page-header-inner,
+.inovasi-wizard-page .service-page-header.is-narrow .service-page-header-inner { max-width: 720px; }
+.inovasi-wizard-page .service-breadcrumb { margin-bottom: 10px; }
+.inovasi-wizard-page .service-page-heading p { margin-top: 8px; }
+
+@media (max-width: 760px) {
+  .inovasi-wizard-page .service-page-header { padding: 16px 14px 18px; }
+  .inovasi-wizard-page .service-page-header .service-page-header-inner,
+  .inovasi-wizard-page .service-page-header.is-narrow .service-page-header-inner { max-width: none; }
+  .inovasi-wizard-page .service-page-heading p { margin-top: 8px; }
+}
 
 /* --- Indikator tahap --- */
 .wiz-steps-wrap { margin-bottom: 22px; }

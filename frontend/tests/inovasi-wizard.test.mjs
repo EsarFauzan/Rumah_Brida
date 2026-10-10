@@ -62,3 +62,15 @@ test('wizard tetap mengirim payload dan review yang sama', () => {
   assert.match(page, /payload\.append\('_method', 'PUT'\)/)
   assert.match(page, /validateInnovation\(form\)/)
 })
+
+test('header halaman wizard memakai padding padat dan lebar setinggi kolom wizard', () => {
+  assert.match(
+    css,
+    /\.inovasi-wizard-page \.service-page-header \{\s*padding: 18px 20px 20px;\s*\}/
+  )
+  assert.match(
+    css,
+    /\.inovasi-wizard-page \.service-page-header \.service-page-header-inner,\s*\n?\.inovasi-wizard-page \.service-page-header\.is-narrow \.service-page-header-inner \{ max-width: 720px; \}/
+  )
+  assert.doesNotMatch(css, /\.inovasi-wizard-page \.service-page-header-inner \{ max-width: 760px; \}/)
+})

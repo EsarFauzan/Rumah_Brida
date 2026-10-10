@@ -2163,6 +2163,43 @@ terukur >= 5.90:1. Bukti geometri ini adalah pengukuran DOM, bukan
 tinjauan mata pada screenshot; alat `view_image` tidak tersedia di
 lingkungan ini sehingga screenshot hanya dipakai sebagai artefak.
 
+## 12V. Proporsi Header Halaman Wizard 10 Oktober 2026
+
+Hanya CSS; tidak ada perubahan JSX, endpoint, migration, atau state wizard.
+`ServicePageHeader` pada `/inovasi/input` dan `/riset/proposal` terlalu lapang
+karena aturan dasarnya dirancang untuk halaman daftar lebar 1100-1160px: padding
+vertikal 26/28px dan `margin-bottom` crumb 14px, sementara kolom wizard hanya
+760px (Riset `narrow` 820px). Akibatnya tinggi header 181px di 1440px padahal
+isinya hanya 126px, dan judul/crumb mulai 20px (Inovasi) atau 50px (Riset) di
+sebelah kiri panel wizard karena `.is-narrow` di `ServiceDesign.css` memakai
+`max-width: 820px`.
+
+- Blok baru `.inovasi-wizard-page .service-page-header` menurunkan padding
+  menjadi `18px 20px 20px`, crumb `margin-bottom` 10px, dan jarak paragraf
+  heading 8px. Tinggi header mengikuti isinya, bukan dipaksa lewat
+  `min-height`/`height` yang hanya menambah ruang kosong.
+- Lebar `.service-page-header-inner` disamakan dengan lebar kolom wizard (760px)
+  dikurangi padding horizontal header (2x20px) menjadi 720px, dan ditimpa juga
+  untuk varian `.is-narrow`. Sekarang judul, breadcrumb, dan panel wizard mulai
+  pada satu garis yang sama (offset 0px).
+- Aturan lama `.inovasi-wizard-page .service-page-header-inner { max-width:
+  760px; }` dihapus karena justru penyebab misalignment 20px.
+- Mobile <=760px memakai `padding: 16px 14px 18px` dan `max-width: none` agar
+  tetap mengisi layar sempit.
+- Cakupan `.inovasi-wizard-page` tetap hanya dua halaman wizard; header halaman
+  daftar lain (26/28px, 1100px) tidak berubah.
+- Test penjaga baru di `tests/inovasi-wizard.test.mjs` memastikan padding
+  `18px 20px 20px`, `max-width: 720px` untuk inner dan varian `.is-narrow`,
+  serta aturan lama 760px tidak kembali diam-diam.
+
+Verifikasi: ESLint bersih; build Vite sukses; 37 unit/regression test frontend
+lulus. Audit Chrome headless dengan fixture API (semua request di-mock lewat
+Fetch domain, skrip sementara sudah dihapus) pada kedua wizard di 1440x900 dan
+390x844 dalam light/dark: 40 dari 40 asersi lulus, yaitu tanpa overflow
+horizontal, hanya satu tahap tampil, offset header/panel 0px di semua viewport,
+dan tinggi header turun ke 157px desktop (heading 95px) serta 172-210px mobile.
+Tidak ada penulisan ke database pengguna.
+
 ## 13. Alur Kerja Git
 
 Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
