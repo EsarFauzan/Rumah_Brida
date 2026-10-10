@@ -2038,6 +2038,29 @@ h1, h2, h3, .modal-target, button, a.primary-button, .account-button, .result-ac
 }
 .wiz-progress-note { margin: 10px 0 0; color: var(--text-faint); font-size: 12.5px; }
 
+/* --- Peringatan validasi dalam wizard ---
+  Kotak ini duduk di antara bar progres dan panel tahap, jadi harus full-width
+  dan rata dengan keduanya. Aturan lama `.inovasi-page .form-feedback`
+  meng-inset 34px sehingga kotaknya terlihat meleset, sementara
+  `.riset-card .form-feedback` sudah tidak terpakai karena markup memakai
+  `.wiz-panel`. `.wiz-feedback` di bawah memakai specificity yang sama dengan
+  aturan `inovasi-page` tetapi muncul lebih akhir, jadi berlaku untuk kedua
+  wizard tanpa menyentuh halaman lain yang memakai `.form-feedback`. */
+.inovasi-wizard-page .wiz-feedback {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin: 20px 0 0; padding: 13px 16px; border-radius: 10px;
+  border-left-width: 3px;
+  font-size: 13.5px; font-weight: 500; line-height: 1.55;
+}
+.inovasi-wizard-page .wiz-feedback.error {
+  color: var(--danger-strong); background: var(--danger-bg);
+  border-color: var(--danger-line); border-left-color: var(--danger-strong);
+}
+.inovasi-wizard-page .wiz-feedback.success {
+  color: var(--success); background: var(--success-bg);
+  border-color: var(--success-line); border-left-color: var(--success);
+}
+
 /* --- Panel tahap --- */
 @keyframes wiz-panel-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 .wiz-panel {

@@ -111,9 +111,15 @@ function InnovationForm({ innovationId }) {
     setErrors((current) => ({ ...current, [name]: undefined }))
   }
 
-  const goToStep = (index) => {
+  const goToStep = (index, { preserveFeedback = false } = {}) => {
     if (index < 0 || index >= SECTIONS.length || index === stepIndex) return
     setStepIndex(index)
+    // Error dan pesan belong to tahap asal. Tanpa pembersihan, tahap tanpa
+    // field wajib ikut menampilkan "Lengkapi data wajib pada tahap ini".
+    if (!preserveFeedback) {
+      setFeedback(null)
+      setErrors({})
+    }
     requestAnimationFrame(() => {
       formMainRef.current?.scrollIntoView({ behavior: reducedMotion() ? 'instant' : 'smooth', block: 'start' })
       requestAnimationFrame(() => {
@@ -317,7 +323,7 @@ function InnovationForm({ innovationId }) {
               <p className="wiz-progress-note">Tahap {stepIndex + 1} dari {SECTIONS.length} — {completedRequiredCount} dari {innovationRequiredFields.length} data wajib terisi</p>
             </nav>
 
-            {feedback && <div className={`form-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
+            {feedback && <div className={`form-feedback wiz-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
 
             <form onSubmit={requestReview} noValidate>
               <section className="wiz-panel" key={activeSection.id} aria-labelledby={`inovasi-step-title-${stepIndex}`}>

@@ -122,9 +122,15 @@ function ResearchProposalPage({ proposalId = null }) {
     setErrors((current) => ({ ...current, pdf: undefined }))
   }
 
-  const goToStep = (index) => {
+  const goToStep = (index, { preserveFeedback = false } = {}) => {
     if (index < 0 || index >= SECTIONS.length || index === stepIndex) return
     setStepIndex(index)
+    // Error dan pesan belong to tahap asal. Tanpa pembersihan, tahap tanpa
+    // field wajib ikut menampilkan "Lengkapi data wajib pada tahap ini".
+    if (!preserveFeedback) {
+      setFeedback(null)
+      setErrors({})
+    }
     requestAnimationFrame(() => {
       formMainRef.current?.scrollIntoView({ behavior: reducedMotion() ? 'instant' : 'smooth', block: 'start' })
       requestAnimationFrame(() => {
@@ -166,7 +172,7 @@ function ResearchProposalPage({ proposalId = null }) {
       focusFirstError(validation)
       const firstErrorKey = Object.keys(validation)[0]
       const errorStep = SECTIONS.findIndex((s) => s.fields.includes(firstErrorKey))
-      if (errorStep !== -1 && errorStep !== stepIndex) goToStep(errorStep)
+      if (errorStep !== -1 && errorStep !== stepIndex) goToStep(errorStep, { preserveFeedback: true })
       return
     }
     setFeedback(null)
@@ -326,7 +332,7 @@ function ResearchProposalPage({ proposalId = null }) {
               <p className="wiz-progress-note">Tahap {stepIndex + 1} dari {SECTIONS.length} — {completedRequiredCount} dari {researchRequiredFields.length} data wajib terisi</p>
             </nav>
 
-            {feedback && <div className={`form-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
+            {feedback && <div className={`form-feedback wiz-feedback ${feedback.type}`} role={feedback.type === 'error' ? 'alert' : 'status'}>{feedback.message}</div>}
 
             <form onSubmit={(event) => { event.preventDefault(); if (isLastStep) requestReview(); else advanceStep() }} noValidate>
               <section className="wiz-panel" aria-labelledby={`riset-step-title-${stepIndex}`}>

@@ -2099,6 +2099,53 @@ label tahap aktif yang tampil), dan `prefers-reduced-motion` mematikan animasi
 panel. Tidak ada penulisan ke database pengguna (POST di-mock). Wizard perlu
 dicek sekali di browser interaktif dengan backend nyata sebelum merge.
 
+## 12U. Perbaikan Peringatan Validasi Wizard 10 Oktober 2026
+
+Dua perbaikan pada halaman wizard Inovasi (`/inovasi/input`) dan Riset
+(`/riset/proposal`). Tidak ada perubahan endpoint, payload, migration, atau
+aturan validasi backend.
+
+- Kytek bukan bug: bar progres kuning hanya menghitung kolom WAJIB.
+  `innovationRequiredFields` berisi lima kolom, sedangkan tiga tanggal pada
+  tahap Timeline (`trial_date`, `implementation_date`, `ratification_date`)
+  semuanya opsional. Jadi 100% pada tahap Timeline memang sahih meski belum
+  ada tanggal yang diisi. Jangan ubah bar progres agar ikut menghitung tahap
+  yang hanya berisi kolom opsional.
+- State bocor antar tahap: `advanceStep` pada tahap yang gagal memunculkan
+  pesan, lalu `goToStep` tidak pernah membersihkannya sehingga tahap berikutnya
+  yang tidak punya field wajib (mis. Timeline) masih menampilkan "Lengkapi data
+  wajib pada tahap ini sebelum melanjutkan". Kedua wizard kini memakai
+  `goToStep(index, { preserveFeedback = false } = {})` yang menghapus
+  `feedback` dan `errors` kecuali dipanggil dengan `preserveFeedback: true`.
+  Auto-lompat tetap memakai jalur itu: `requestReview` (Riset) dan
+  `jumpToErrorStep` (Inovasi) mengirim `preserveFeedback: true` supaya pesan
+  kesalahan milik tahap asal ikut terbawa.
+- Kotak peringatan dibuat simetris lewat kelas bersama `.wiz-feedback` yang
+  dipakai kedua halaman, menggantikan `.form-feedback` polos. Akar masalah
+  tampilan ada di CSS: `.inovasi-page .form-feedback { margin: 24px 34px 0 }`
+  meng-inset kotak 34px sehingga terlihat meleset, sedangkan aturan
+  `.riset-card .form-feedback` sudah menjadi kode mati karena `.riset-card`
+  tidak lagi muncul di markup sejak 12T (panel memakai `.wiz-panel`).
+  Aturan `.riset-card .form-feedback` di `App.css` boleh dihapus tanpa efek.
+- `.inovasi-wizard-page .wiz-feedback` (specificity 0,2,0, sama dengan
+  `.inovasi-page .form-feedback` tetapi ditulis lebih akhir) berlaku untuk
+  kedua wizard tanpa menyentuh halaman lain yang memakai `.form-feedback`.
+  Kotak sekarang full-width, rata kiri dengan navigasi tahap, bar progres, dan
+  panel; padding 13px 16px, radius 10px, border kiri tebal 3px, font 13.5px.
+  Warna memakai token semantik (`--danger-*` dan `--success-*`) sehingga tetap
+  aman di dark mode.
+
+Verifikasi: audit Chrome headless dengan fixture API (skrip sementara, sudah
+dihapus) memakai 24 asersi, seluruhnya lulus pada kedua wizard: satu elemen
+peringatan, pesan muncul hanya saat validasi gagal, `left` peringatan sama
+dengan panel (14px), lebar penuh (715px desktop dan 362px mobile 390px),
+`margin-left: 0px`, dua `.field-error` muncul, panel tidak overflow, dan pesan
+hilang saat pindah ke tahap tanpa field wajib. Dark mode 390px kontras teks
+8.97:1 setelah latar `rgba(220, 60, 45, 0.14)` dikomposit di atas latar induk
+`rgb(14, 22, 38)`; harness lama sempat salah menghitung latar transparan
+sebagai warna solid sehingga melaporkan 2.20:1. ESLint bersih, build Vite sukses,
+seluruh 36 unit/regression test frontend lulus. Tidak ada penulisan ke database
+pengguna (POST di-mock).
 ## 13. Alur Kerja Git
 
 Remote: `https://github.com/EsarFauzan/Rumah_Brida.git`.
